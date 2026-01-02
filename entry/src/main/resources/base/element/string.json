@@ -1,0 +1,140 @@
+{
+  "string": [
+    {
+      "name": "module_desc",
+      "value": "module description"
+    },
+    {
+      "name": "EntryAbility_desc",
+      "value": "description"
+    },
+    {
+      "name": "EntryAbility_label",
+      "value": "label"
+    },
+    {
+      "name": "app_name",
+      "value": "Lumina"
+    },
+    {
+      "name": "app_tagline",
+      "value": "Light Up Your Products"
+    },
+    {
+      "name": "welcome_back",
+      "value": "欢迎回来"
+    },
+    {
+      "name": "login_to_continue",
+      "value": "登录以继续使用"
+    },
+    {
+      "name": "phone_number",
+      "value": "手机号"
+    },
+    {
+      "name": "enter_phone_number",
+      "value": "请输入手机号"
+    },
+    {
+      "name": "verification_code",
+      "value": "验证码"
+    },
+    {
+      "name": "enter_verification_code",
+      "value": "请输入验证码"
+    },
+    {
+      "name": "get_verification_code",
+      "value": "获取验证码"
+    },
+    {
+      "name": "login",
+      "value": "登录"
+    },
+    {
+      "name": "or",
+      "value": "或"
+    },
+    {
+      "name": "wechat_quick_login",
+      "value": "微信快捷登录"
+    },
+    {
+      "name": "no_account",
+      "value": "还没有账号?"
+    },
+    {
+      "name": "guest_mode",
+      "value": "游客模式体验"
+    },
+    {
+      "name": "greeting",
+      "value": "你好, 创作者"
+    },
+    {
+      "name": "scenario_question",
+      "value": "今天要处理什么类型的图片?"
+    },
+    {
+      "name": "quick_scenarios",
+      "value": "快速场景"
+    },
+    {
+      "name": "one_click_generate",
+      "value": "一键生成"
+    },
+    {
+      "name": "upgrade_pro",
+      "value": "升级专业版"
+    },
+    {
+      "name": "unlimited_use",
+      "value": "无限使用"
+    },
+    {
+      "name": "homepage",
+      "value": "首页"
+    },
+    {
+      "name": "scenarios",
+      "value": "场景"
+    },
+    {
+      "name": "works",
+      "value": "作品"
+    },
+    {
+      "name": "my",
+      "value": "我的"
+    },
+    {
+      "name": "scenario_detail",
+      "value": "场景详情"
+    },
+    {
+      "name": "upload_image",
+      "value": "上传图片"
+    },
+    {
+      "name": "click_to_upload",
+      "value": "点击上传图片"
+    },
+    {
+      "name": "image_format_hint",
+      "value": "支持 JPG、PNG 格式"
+    },
+    {
+      "name": "re_upload",
+      "value": "重新上传"
+    },
+    {
+      "name": "start_process",
+      "value": "开始处理"
+    },
+    {
+      "name": "processing_tips",
+      "value": "处理说明"
+    }
+  ]
+}

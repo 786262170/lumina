@@ -1,0 +1,20 @@
+{
+  "src": [
+    "pages/Splash",
+    "pages/Welcome",
+    "pages/AIQuestionnaire",
+    "pages/AIRecommendation",
+    "pages/Login",
+    "pages/Index",
+    "pages/ScenarioDetail",
+    "pages/Workbench",
+    "pages/ProcessResult",
+    "pages/BatchProcess",
+    "pages/MyWorks",
+    "pages/My",
+    "pages/MemberSubscription",
+    "pages/Settings",
+    "pages/BackgroundTemplates",
+    "pages/BackgroundTemplateDetail"
+  ]
+}
