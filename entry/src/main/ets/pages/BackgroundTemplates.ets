@@ -98,6 +98,21 @@ struct BackgroundTemplates {
     });
   }
 
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
+
   // 处理搜索
   handleSearch() {
     // 搜索逻辑已在 getter 中实现
@@ -131,22 +146,29 @@ struct BackgroundTemplates {
       // 顶部导航栏
       Row() {
         // 返回按钮
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .fillColor('#1F2937')
-          .onClick(() => {
-            // 返回上一页
-            router.back();
-          })
+        Button() {
+          Text('<')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#1A1F36')
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
+        .onClick(() => {
+          this.handleBack();
+        })
 
         // 标题
-        Text('Background Templates')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
+        Text('背景模板')
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
+          .margin({ left: -40 })
           .margin({ left: -24 })
 
         // 搜索按钮
@@ -183,9 +205,11 @@ struct BackgroundTemplates {
           TextInput({ placeholder: '搜索模板...', text: this.searchKeyword })
             .layoutWeight(1)
             .fontSize(14)
-            .backgroundColor('#F3F4F6')
+            .fontColor('#1A1F36')
+            .backgroundColor('#F8F9FC')
             .borderRadius(20)
             .padding({ left: 16, right: 16, top: 10, bottom: 10 })
+            .border({ width: 1, color: '#E5E7EB' })
             .onChange((value: string) => {
               this.searchKeyword = value;
             })
@@ -194,33 +218,45 @@ struct BackgroundTemplates {
             })
 
           if (this.searchKeyword.trim()) {
-            Image($r('app.media.startIcon'))
-              .width(20)
-              .height(20)
-              .fillColor('#6B7280')
-              .margin({ left: 8 })
-              .onClick(() => {
-                this.handleClearSearch();
-              })
+            Button() {
+              Text('×')
+                .fontSize(20)
+                .fontColor('#6B7280')
+            }
+            .type(ButtonType.Normal)
+            .width(32)
+            .height(32)
+            .backgroundColor('#F8F9FC')
+            .borderRadius(16)
+            .margin({ left: 8 })
+            .onClick(() => {
+              this.handleClearSearch();
+            })
           }
         }
         .width('100%')
         .padding({ left: 20, right: 20, top: 12, bottom: 12 })
         .backgroundColor('#FFFFFF')
         .border({ width: { bottom: 1 }, color: '#E5E7EB' })
+        .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
       }
 
       // 分类标签栏
       Scroll() {
         Row() {
           ForEach(this.categories, (category: string) => {
-            Text(category)
+            Button(category)
+              .type(ButtonType.Normal)
               .fontSize(14)
-              .fontWeight(this.selectedCategory === category ? FontWeight.Bold : FontWeight.Normal)
+              .fontWeight(this.selectedCategory === category ? FontWeight.Medium : FontWeight.Regular)
               .fontColor(this.selectedCategory === category ? '#FFFFFF' : '#6B7280')
               .padding({ left: 16, right: 16, top: 8, bottom: 8 })
-              .borderRadius(20)
-              .backgroundColor(this.selectedCategory === category ? '#6366F1' : '#F3F4F6')
+              .borderRadius(18)
+              .backgroundColor(this.selectedCategory === category ? '#667eea' : '#F8F9FC')
+              .border({
+                width: this.selectedCategory === category ? 0 : 1,
+                color: '#E5E7EB'
+              })
               .margin({ right: 12 })
               .onClick(() => {
                 this.selectedCategory = category;
@@ -231,6 +267,8 @@ struct BackgroundTemplates {
       }
       .scrollable(ScrollDirection.Horizontal)
       .scrollBar(BarState.Off)
+      .backgroundColor('#FFFFFF')
+      .border({ width: { bottom: 1 }, color: '#E5E7EB' })
 
       // 空状态提示
       if (this.filteredTemplates.length === 0) {
@@ -274,7 +312,7 @@ struct BackgroundTemplates {
                   .height('100%')
                   .justifyContent(FlexAlign.Center)
                   .alignItems(HorizontalAlign.Center)
-                  .backgroundColor('#F3F4F6')
+                  .backgroundColor('#F8F9FC')
                   
                   // 高级标签（如果有）
                   if (template.isPremium) {
@@ -284,19 +322,25 @@ struct BackgroundTemplates {
                         .fontWeight(FontWeight.Bold)
                         .fontColor('#FFFFFF')
                         .padding({ left: 6, right: 6, top: 2, bottom: 2 })
-                        .backgroundColor('#FF6B6B')
+                        .backgroundColor('#EF4444')
                         .borderRadius(4)
                     }
                     .width('100%')
                     .height('100%')
                     .justifyContent(FlexAlign.Start)
-                    .alignItems(VerticalAlign.Bottom)
+                    .alignItems(VerticalAlign.Top)
                     .padding(8)
                   }
                 }
                 .width('100%')
                 .aspectRatio(1)
                 .borderRadius(12)
+                .shadow({
+                  radius: 4,
+                  color: '#000000',
+                  offsetX: 0,
+                  offsetY: 2
+                })
                 .margin({ bottom: 8 })
 
                 // 模板标题
@@ -328,9 +372,12 @@ struct BackgroundTemplates {
               }
               .width('100%')
               .padding(8)
+              .backgroundColor('#FFFFFF')
+              .borderRadius(12)
               .onClick(() => {
                 this.handleTemplateClick(template);
               })
+              .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
             }
           }, (template: BackgroundTemplate) => template.id)
         }
@@ -346,7 +393,7 @@ struct BackgroundTemplates {
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#FFFFFF')
+    .backgroundColor('#F8F9FC')
   }
 }
 

@@ -56,18 +56,40 @@ struct AIQuestionnaire {
   private iconSettings: RenderingContextSettings = new RenderingContextSettings(true);
   private iconContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.iconSettings);
 
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
+
   build() {
     Column() {
       // 顶部导航栏
       Row() {
         // 返回按钮
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .fillColor('#1F2937')
-          .onClick(() => {
-            router.back();
-          })
+        Button() {
+          Text('<')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#1A1F36')
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
+        .onClick(() => {
+          this.handleBack();
+        })
 
         Blank()
 
@@ -104,10 +126,10 @@ struct AIQuestionnaire {
               .height(120)
               .borderRadius(60)
               .linearGradient({
-                angle: 180,
+                angle: 135,
                 colors: [
-                  ['#A78BFA', 0],
-                  ['#7C3AED', 1]
+                  ['#667eea', 0.0],
+                  ['#764ba2', 1.0]
                 ]
               })
 
@@ -152,7 +174,7 @@ struct AIQuestionnaire {
             .margin({ bottom: 32 })
             .padding({ left: 24, right: 24 })
 
-          // 选项列表
+          // 选项列表（带动画过渡）
           Column() {
             ForEach(this.questions[this.currentQuestion].options, (option: ProductOption) => {
               Row() {
@@ -183,12 +205,18 @@ struct AIQuestionnaire {
                   .fontColor('#1F2937')
                   .layoutWeight(1)
 
-                // 选中指示器
+                // 选中指示器（对勾）
                 if (this.selectedOptionId === option.id) {
-                  Image($r('app.media.startIcon'))
-                    .width(20)
-                    .height(20)
-                    .fillColor('#7C3AED')
+                  Stack() {
+                    Circle({ width: 20, height: 20 })
+                      .fill('#667eea')
+                    Text('✓')
+                      .fontSize(12)
+                      .fontColor('#FFFFFF')
+                      .fontWeight(FontWeight.Medium)
+                  }
+                  .width(20)
+                  .height(20)
                 }
               }
               .width('100%')
@@ -197,10 +225,17 @@ struct AIQuestionnaire {
               .borderRadius(12)
               .border({
                 width: this.selectedOptionId === option.id ? 2 : 1,
-                color: this.selectedOptionId === option.id ? '#7C3AED' : '#E5E7EB'
+                color: this.selectedOptionId === option.id ? '#667eea' : '#E5E7EB'
               })
-              .backgroundColor('#FFFFFF')
+              .backgroundColor(this.selectedOptionId === option.id ? '#F8F9FC' : '#FFFFFF')
+              .shadow({
+                radius: this.selectedOptionId === option.id ? 8 : 0,
+                color: this.selectedOptionId === option.id ? '#667eea' : '#000000',
+                offsetX: 0,
+                offsetY: this.selectedOptionId === option.id ? 4 : 0
+              })
               .margin({ bottom: 12 })
+              .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
               .onClick(() => {
                 this.selectedOptionId = option.id;
               })
@@ -230,10 +265,10 @@ struct AIQuestionnaire {
         .height(56)
         .borderRadius(16)
         .linearGradient({
-          angle: 0,
+          angle: 135,
           colors: [
-            ['#7C3AED', 0],
-            ['#3B82F6', 1]
+            ['#667eea', 0.0],
+            ['#764ba2', 1.0]
           ]
         })
         .enabled(this.selectedOptionId !== '')
@@ -250,7 +285,8 @@ struct AIQuestionnaire {
               .width(8)
               .height(8)
               .borderRadius(4)
-              .backgroundColor(index === this.currentQuestion ? '#3B82F6' : '#E5E7EB')
+              .backgroundColor(index === this.currentQuestion ? '#667eea' : '#E5E7EB')
+              .transition(TransitionEffect.OPACITY.animation({ duration: 300, curve: Curve.EaseInOut }))
               .margin({ left: 4, right: 4 })
           }, (index: number) => index.toString())
         }
@@ -488,11 +524,25 @@ struct AIQuestionnaire {
     context.stroke();
   }
 
-  // 下一题
+  // 下一题（带动画过渡）
   private nextQuestion() {
     if (this.currentQuestion < 2) {
-      this.currentQuestion++;
-      this.selectedOptionId = '';
+      // 添加淡出动画
+      animateTo({
+        duration: 200,
+        curve: Curve.EaseInOut
+      }, () => {
+        this.currentQuestion++;
+        this.selectedOptionId = '';
+      });
+      
+      // 淡入动画
+      animateTo({
+        duration: 300,
+        curve: Curve.EaseInOut
+      }, () => {
+        // 内容已更新
+      });
     } else {
       // 完成问卷，跳转到AI推荐页
       router.replaceUrl({

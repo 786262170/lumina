@@ -89,3 +89,11 @@ export interface BatchBackgroundTemplate {
   gradientColors?: string[];
 }
 
+// 最近作品接口
+export interface RecentWork {
+  id: string;
+  filename: string;
+  thumbnail: string;
+  createdAt?: string;
+}
+

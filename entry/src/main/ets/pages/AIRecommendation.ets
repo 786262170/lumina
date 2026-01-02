@@ -63,6 +63,21 @@ struct AIRecommendation {
     }
   ];
 
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
+
   // 备选方案列表
   @State alternativeSolutions: AlternativeSolution[] = [
     {
@@ -94,18 +109,55 @@ struct AIRecommendation {
           .width('100%')
           .height('100%')
           .linearGradient({
-            angle: 180,
+            angle: 135,
             colors: [
-              ['#8B5CF6', 0],
-              ['#6366F1', 1]
+              ['#667eea', 0.0],
+              ['#764ba2', 1.0]
             ]
           })
+
+        // 装饰性元素（模糊圆圈）
+        Stack() {
+          Circle({ width: 80, height: 80 })
+            .fill('#FFFFFF')
+            .opacity(0.2)
+        }
+        .width(80)
+        .height(80)
+        .position({ x: '80%', y: '10%' })
+
+        Stack() {
+          Circle({ width: 64, height: 64 })
+            .fill('#FFFFFF')
+            .opacity(0.15)
+        }
+        .width(64)
+        .height(64)
+        .position({ x: '10%', y: '80%' })
         
         // 内容
         Column() {
-          // 顶部栏（星标图标）
+          // 顶部栏（返回按钮 + 星标图标）
           Row() {
+            // 返回按钮
+            Button() {
+              Text('<')
+                .fontSize(20)
+                .fontWeight(FontWeight.Medium)
+                .fontColor('#FFFFFF')
+            }
+            .type(ButtonType.Normal)
+            .width(40)
+            .height(40)
+            .backgroundColor('#FFFFFF')
+            .opacity(0.2)
+            .borderRadius(8)
+            .onClick(() => {
+              this.handleBack();
+            })
+
             Blank()
+
             Image($r('app.media.startIcon'))
               .width(24)
               .height(24)
@@ -115,32 +167,47 @@ struct AIRecommendation {
           .width('100%')
           .height(56)
           .padding({ left: 20, right: 20 })
+          .justifyContent(FlexAlign.SpaceBetween)
+          .alignItems(VerticalAlign.Center)
           
-          // 匹配度圆圈
+          // 匹配度圆圈（带星标图标）
           Stack() {
-            Circle({ width: 120, height: 120 })
-              .fill('#FFFFFF')
-              .opacity(0.2)
+            Circle({ width: 128, height: 128 })
+              .fill('rgba(255, 255, 255, 0.2)')
               .stroke('#FFFFFF')
-              .strokeWidth(2)
+              .strokeWidth(3)
+              .opacity(0.3)
             
             Column() {
               Text(`${this.matchScore}%`)
-                .fontSize(36)
+                .fontSize(40)
                 .fontWeight(FontWeight.Bold)
                 .fontColor('#FFFFFF')
                 .margin({ bottom: 4 })
               
               Text('匹配度')
                 .fontSize(14)
+                .fontWeight(FontWeight.Medium)
                 .fontColor('#FFFFFF')
                 .opacity(0.9)
             }
             .alignItems(HorizontalAlign.Center)
+
+            // 星标图标（右上角）
+            Stack() {
+              Circle({ width: 24, height: 24 })
+                .fill('#FFFFFF')
+              Text('✨')
+                .fontSize(16)
+            }
+            .width(24)
+            .height(24)
+            .position({ x: 104, y: -4 })
           }
-          .width(120)
-          .height(120)
+          .width(128)
+          .height(128)
           .margin({ top: 20, bottom: 24 })
+          .transition(TransitionEffect.OPACITY.animation({ duration: 500, curve: Curve.EaseOut }))
           
           // 主标题
           Text('为您推荐最佳方案')
@@ -161,19 +228,19 @@ struct AIRecommendation {
           // 推荐场景卡片
           Column() {
             Row() {
-              // 场景图标
+              // 场景图标（渐变背景）
               Stack() {
                 Rect()
                   .width(48)
                   .height(48)
                   .radius(12)
-                  .fill('#6366F1')
+                  .fill('#667eea')
                   .opacity(0.2)
                 
                 Image(this.recommendedScenario.icon)
                   .width(24)
                   .height(24)
-                  .fillColor('#6366F1')
+                  .fillColor('#667eea')
               }
               .width(48)
               .height(48)
@@ -188,7 +255,8 @@ struct AIRecommendation {
                 
                 Text(this.recommendedScenario.subtitle)
                   .fontSize(14)
-                  .fontColor('#3B82F6')
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor('#667eea')
               }
               .alignItems(HorizontalAlign.Start)
               .layoutWeight(1)
@@ -255,13 +323,13 @@ struct AIRecommendation {
           Column() {
             ForEach(this.recommendedFeatures, (feature: RecommendedFeature) => {
               Row() {
-                // 功能图标
+                // 功能图标（渐变背景）
                 Stack() {
                   Rect()
                     .width(40)
                     .height(40)
                     .radius(10)
-                    .fill('#3B82F6')
+                    .fill('#667eea')
                   
                   Image(feature.icon)
                     .width(20)
@@ -286,17 +354,27 @@ struct AIRecommendation {
                 .alignItems(HorizontalAlign.Start)
                 .layoutWeight(1)
                 
-                // 选中标记
+                // 选中标记（对勾）
                 if (feature.selected) {
-                  Image($r('app.media.startIcon'))
-                    .width(20)
-                    .height(20)
-                    .fillColor('#3B82F6')
+                  Stack() {
+                    Circle({ width: 20, height: 20 })
+                      .fill('#667eea')
+                    Text('✓')
+                      .fontSize(12)
+                      .fontColor('#FFFFFF')
+                      .fontWeight(FontWeight.Medium)
+                  }
+                  .width(20)
+                  .height(20)
                 }
               }
               .width('100%')
               .padding({ left: 16, right: 16, top: 12, bottom: 12 })
               .margin({ bottom: 8 })
+              .backgroundColor('#F8F9FC')
+              .borderRadius(12)
+              .border({ width: 1, color: '#E5E7EB' })
+              .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
             }, (feature: RecommendedFeature) => feature.id)
           }
           .width('100%')
@@ -321,12 +399,12 @@ struct AIRecommendation {
                       .width(60)
                       .height(60)
                       .radius(12)
-                      .fill('#F3F4F6')
+                      .fill('#F8F9FC')
                     
                     Image(solution.icon)
                       .width(30)
                       .height(30)
-                      .fillColor('#3B82F6')
+                      .fillColor('#667eea')
                   }
                   .width(60)
                   .height(60)
@@ -338,16 +416,33 @@ struct AIRecommendation {
                     .fontColor('#1F2937')
                     .margin({ bottom: 4 })
                   
-                  Text(`${solution.matchPercent}% 匹配`)
-                    .fontSize(12)
-                    .fontColor('#6B7280')
+                  Row() {
+                    Text(`${solution.matchPercent}%`)
+                      .fontSize(12)
+                      .fontWeight(FontWeight.Medium)
+                      .fontColor('#667eea')
+                    Text('匹配')
+                      .fontSize(12)
+                      .fontColor('#6B7280')
+                  }
+                  .justifyContent(FlexAlign.Center)
                 }
                 .width(120)
                 .padding(16)
                 .backgroundColor('#FFFFFF')
                 .borderRadius(12)
                 .border({ width: 1, color: '#E5E7EB' })
+                .shadow({
+                  radius: 4,
+                  color: '#000000',
+                  offsetX: 0,
+                  offsetY: 2
+                })
                 .margin({ right: 12 })
+                .onClick(() => {
+                  // 选择备选方案
+                  console.info(`选择备选方案: ${solution.title}`);
+                })
               }, (solution: AlternativeSolution) => solution.id)
             }
             .padding({ left: 20, right: 20 })
@@ -380,10 +475,10 @@ struct AIRecommendation {
             .height(48)
             .borderRadius(12)
             .linearGradient({
-              angle: 0,
+              angle: 135,
               colors: [
-                ['#6366F1', 0],
-                ['#8B5CF6', 1]
+                ['#667eea', 0.0],
+                ['#764ba2', 1.0]
               ]
             })
             .margin({ bottom: 12 })

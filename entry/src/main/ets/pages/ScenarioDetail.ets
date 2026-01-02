@@ -14,6 +14,25 @@ struct ScenarioDetail {
   @State isProcessing: boolean = false; // 是否正在处理
   @State processingProgress: number = 0; // 处理进度（0-100）
   @State selectedTemplate: BackgroundTemplate | null = null; // 选中的背景模板
+  // 快速设置
+  @State outputSize: string = '2000x2000'; // 输出尺寸
+  @State quality: number = 85; // 输出质量（0-100）
+  @State edgeSmoothing: boolean = true; // 边缘平滑
+
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
 
   aboutToAppear() {
     // 获取路由参数
@@ -43,20 +62,29 @@ struct ScenarioDetail {
       // 顶部导航栏
       Row() {
         // 返回按钮
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .fillColor('#1F2937')
-          .onClick(() => {
-            router.back();
-          })
+        Button() {
+          Text('<')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#1A1F36')
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
+        .onClick(() => {
+          this.handleBack();
+        })
 
         // 标题
         Text(this.scenarioTitle || '淘宝白底图')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#1A1F36')
           .layoutWeight(1)
+          .textAlign(TextAlign.Center)
+          .margin({ left: -40 })
           .textAlign(TextAlign.Center)
           .margin({ left: -24 })
 
@@ -82,36 +110,158 @@ struct ScenarioDetail {
       // 内容区域
       Scroll() {
         Column() {
-          // 场景说明区域
-          Row() {
-            // 信息图标
-            Image($r('app.media.startIcon'))
-              .width(20)
-              .height(20)
-              .fillColor('#6366F1')
-              .margin({ right: 12 })
+          // 场景信息横幅（渐变背景）
+          Column() {
+            Text(this.scenarioTitle || '淘宝白底图')
+              .fontSize(24)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#FFFFFF')
+              .margin({ bottom: 8 })
 
-            Column() {
-              Text('场景说明')
-                .fontSize(14)
-                .fontWeight(FontWeight.Bold)
-                .fontColor('#1F2937')
-                .margin({ bottom: 4 })
-
-              Text(this.getScenarioDescription())
-                .fontSize(13)
-                .fontColor('#6B7280')
-                .lineHeight(18)
-            }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
+            Text(this.getScenarioDescription())
+              .fontSize(14)
+              .fontColor('#FFFFFF')
+              .opacity(0.9)
+              .lineHeight(20)
           }
           .width('100%')
-          .alignItems(VerticalAlign.Center)
-          .padding(16)
-          .margin({ top: 16, bottom: 16 })
-          .backgroundColor('#F5F3FF')
-          .borderRadius(12)
+          .padding({ left: 20, right: 20, top: 24, bottom: 24 })
+          .linearGradient({
+            angle: 135,
+            colors: [
+              ['#667eea', 0.0],
+              ['#764ba2', 1.0]
+            ]
+          })
+          .borderRadius({ bottomLeft: 24, bottomRight: 24 })
+          .margin({ bottom: 24 })
+
+          // 快速设置区域
+          Column() {
+            Text('快速设置')
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#1A1F36')
+              .margin({ bottom: 16 })
+              .width('100%')
+
+            // 输出尺寸选择
+            Column() {
+              Text('输出尺寸')
+                .fontSize(14)
+                .fontColor('#6B7280')
+                .margin({ bottom: 12 })
+                .width('100%')
+
+              Row() {
+                ForEach(this.getSizePresets(), (preset: string) => {
+                  Button(preset)
+                    .type(ButtonType.Normal)
+                    .fontSize(14)
+                    .fontWeight(FontWeight.Medium)
+                    .fontColor(this.outputSize === preset ? '#FFFFFF' : '#1A1F36')
+                    .backgroundColor(this.outputSize === preset ? '#667eea' : '#F8F9FC')
+                    .border({
+                      width: this.outputSize === preset ? 0 : 1,
+                      color: '#E5E7EB'
+                    })
+                    .borderRadius(8)
+                    .height(36)
+                    .layoutWeight(1)
+                    .margin({ right: 8 })
+                    .onClick(() => {
+                      this.outputSize = preset;
+                    })
+                }, (preset: string) => preset)
+              }
+              .width('100%')
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(12)
+            .margin({ bottom: 12 })
+
+            // 输出质量滑块
+            Column() {
+              Row() {
+                Text('输出质量')
+                  .fontSize(14)
+                  .fontColor('#6B7280')
+                  .layoutWeight(1)
+
+                Text(`${this.quality}%`)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor('#667eea')
+              }
+              .width('100%')
+              .margin({ bottom: 12 })
+
+              Slider({
+                value: this.quality,
+                min: 0,
+                max: 100,
+                step: 1,
+                style: SliderStyle.OutSet
+              })
+                .width('100%')
+                .blockColor('#667eea')
+                .trackColor('#E5E7EB')
+                .selectedColor('#667eea')
+                .onChange((value: number) => {
+                  this.quality = value;
+                })
+
+              Row() {
+                Text('低')
+                  .fontSize(12)
+                  .fontColor('#C7C7CC')
+                Blank()
+                Text('高')
+                  .fontSize(12)
+                  .fontColor('#C7C7CC')
+              }
+              .width('100%')
+              .margin({ top: 4 })
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(12)
+            .margin({ bottom: 12 })
+
+            // 边缘平滑开关
+            Row() {
+              Column() {
+                Text('边缘平滑')
+                  .fontSize(14)
+                  .fontColor('#1A1F36')
+                  .margin({ bottom: 4 })
+
+                Text('优化边缘细节，让抠图更自然')
+                  .fontSize(12)
+                  .fontColor('#6B7280')
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
+
+              Toggle({ type: ToggleType.Switch, isOn: this.edgeSmoothing })
+                .selectedColor('#667eea')
+                .switchPointColor('#FFFFFF')
+                .onChange((isOn: boolean) => {
+                  this.edgeSmoothing = isOn;
+                })
+            }
+            .width('100%')
+            .padding(16)
+            .backgroundColor('#FFFFFF')
+            .borderRadius(12)
+            .margin({ bottom: 24 })
+          }
+          .width('100%')
+          .padding({ left: 16, right: 16 })
+          .alignItems(HorizontalAlign.Start)
 
           // 图片上传区域
           if (this.isBatchMode() && this.selectedImagePaths.length === 0) {
@@ -478,6 +628,18 @@ struct ScenarioDetail {
     } else {
       return this.selectedImagePath !== '';
     }
+  }
+
+  // 获取尺寸预设列表
+  getSizePresets(): string[] {
+    const presets: Record<string, string[]> = {
+      'taobao': ['2000x2000', '1600x1600', '1000x1000'],
+      'douyin': ['1080x1920', '720x1280', '540x960'],
+      'xiaohongshu': ['1242x1660', '1080x1440', '900x1200'],
+      'amazon': ['2000x2000', '1600x1600', '1000x1000'],
+      'custom': ['2000x2000', '1600x1600', '1000x1000']
+    };
+    return presets[this.scenarioId] || ['2000x2000', '1600x1600', '1000x1000'];
   }
 
   // 选择单张图片

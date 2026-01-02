@@ -1,5 +1,13 @@
 import router from '@ohos.router';
 
+// 批量结果接口
+interface BatchResult {
+  id: string;
+  beforeUrl: string;
+  afterUrl: string;
+  filename: string;
+}
+
 @Entry
 @Component
 struct ProcessResult {
@@ -9,6 +17,7 @@ struct ProcessResult {
   @State processedImageUri: string = ''; // 处理后的图片URI
   @State isSliderMode: boolean = false; // 是否为滑动对比模式
   @State sliderValue: number = 50; // 滑动条的值（0-100）
+  @State isDragging: boolean = false; // 是否正在拖拽
   
   // 图片信息
   @State fileName: string = '未命名.jpg';
@@ -16,6 +25,25 @@ struct ProcessResult {
   @State processedSize: string = '1920x1080';
   @State processTime: string = '2.3秒';
   @State scenarioTitle: string = '';
+
+  // 批量结果（如果有）
+  @State batchResults: BatchResult[] = [];
+  @State currentResultIndex: number = 0;
+
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
 
   aboutToAppear() {
     // 获取路由参数
@@ -53,22 +81,29 @@ struct ProcessResult {
       // 顶部导航栏
       Row() {
         // 返回按钮
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .fillColor('#1F2937')
-          .onClick(() => {
-            router.back();
-          })
+        Button() {
+          Text('<')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#1A1F36')
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
+        .onClick(() => {
+          this.handleBack();
+        })
 
         // 标题
         Text('处理完成')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-          .margin({ left: -24 })
+          .margin({ left: -40 })
 
         // 分享按钮（向上箭头）
         Image($r('app.media.startIcon'))
@@ -97,14 +132,27 @@ struct ProcessResult {
             this.buildSideBySideComparison()
           }
 
-          // 切换到滑动对比按钮
-          Text(this.isSliderMode ? '切换到并排对比' : '切换到滑动对比')
-            .fontSize(14)
-            .fontColor('#3B82F6')
-            .margin({ top: 16, bottom: 24 })
-            .onClick(() => {
-              this.isSliderMode = !this.isSliderMode;
-            })
+          // 切换对比模式按钮
+          Row() {
+            Button(this.isSliderMode ? '并排对比' : '滑动对比')
+              .type(ButtonType.Normal)
+              .fontSize(14)
+              .fontColor('#667eea')
+              .backgroundColor('#F8F9FC')
+              .border({ width: 1, color: '#667eea' })
+              .borderRadius(8)
+              .width(100)
+              .height(36)
+              .onClick(() => {
+                this.isSliderMode = !this.isSliderMode;
+                if (!this.isSliderMode) {
+                  this.sliderValue = 50; // 重置滑块位置
+                }
+              })
+          }
+          .width('100%')
+          .margin({ top: 16, bottom: 24 })
+          .justifyContent(FlexAlign.Center)
 
           // 操作按钮
           Row() {
@@ -238,38 +286,73 @@ struct ProcessResult {
         // 处理后图片（底层）
         Image(this.processedImagePath || this.processedImageUri)
           .width('100%')
-          .height(300)
-          .borderRadius(12)
+          .height(343)
+          .borderRadius(16)
           .objectFit(ImageFit.Cover)
           .backgroundColor('#F3F4F6')
 
-        // 处理前图片（顶层，通过clipRect控制显示区域）
-        Row() {
+        // 处理前图片（顶层，通过clip控制显示区域）
+        Stack() {
           Image(this.originalImagePath || this.originalImageUri)
             .width('100%')
-            .height(300)
+            .height(343)
             .objectFit(ImageFit.Cover)
             .backgroundColor('#F3F4F6')
         }
         .width(`${this.sliderValue}%`)
-        .height(300)
+        .height(343)
         .clip(true)
 
-        // 分割线指示器
-        Column() {
-          // 分割线
+        // 滑块手柄（可拖拽）
+        Stack() {
+          // 垂直分割线
           Column()
-            .width(2)
+            .width(3)
             .height('100%')
-            .backgroundColor('#3B82F6')
-            .shadow({ radius: 4, color: '#3B82F6', offsetX: 0, offsetY: 0 })
-        }
-        .width(2)
-        .height(300)
-        .position({ x: `${this.sliderValue}%`, y: 0 })
-        .offset({ x: -1 })
+            .backgroundColor('#667eea')
+            .shadow({ radius: 4, color: '#667eea', offsetX: 0, offsetY: 0 })
 
-        // 标签
+          // 圆形手柄
+          Stack() {
+            Circle({ width: 40, height: 40 })
+              .fill('#FFFFFF')
+              .shadow({ radius: 8, color: '#000000', offsetX: 0, offsetY: 2 })
+
+            // 手柄图标（左右箭头）
+            Row() {
+              Text('◄')
+                .fontSize(12)
+                .fontColor('#667eea')
+                .margin({ right: 4 })
+              Text('►')
+                .fontSize(12)
+                .fontColor('#667eea')
+                .margin({ left: 4 })
+            }
+          }
+          .width(40)
+          .height(40)
+          .position({ x: 0, y: '50%' })
+          .offset({ x: -18.5, y: -20 })
+        }
+        .width(3)
+        .height(343)
+        .position({ x: `${this.sliderValue}%`, y: 0 })
+        .offset({ x: -1.5 })
+        .onTouch((event: TouchEvent) => {
+          if (event.type === TouchType.Down || event.type === TouchType.Move) {
+            this.isDragging = true;
+            // 计算新的滑块位置
+            const touch = event.touches[0];
+            if (touch) {
+              // 这里需要通过全局坐标计算，暂时使用Slider控件
+            }
+          } else if (event.type === TouchType.Up || event.type === TouchType.Cancel) {
+            this.isDragging = false;
+          }
+        })
+
+        // 标签（Before/After）
         Row() {
           Text('Before')
             .fontSize(12)
@@ -292,13 +375,14 @@ struct ProcessResult {
         .width('100%')
         .height(40)
         .padding({ left: 12, right: 12 })
-        .position({ x: 0, y: 260 })
+        .position({ x: 0, y: 303 })
       }
-      .width('100%')
-      .height(300)
-      .borderRadius(12)
+      .width(343)
+      .height(343)
+      .borderRadius(16)
+      .margin({ bottom: 16 })
 
-      // 滑动条控件
+      // 滑动条控件（用于精确控制）
       Slider({
         value: this.sliderValue,
         min: 0,
@@ -308,16 +392,88 @@ struct ProcessResult {
       })
         .width('100%')
         .height(40)
-        .blockColor('#3B82F6')
+        .blockColor('#667eea')
         .trackColor('#E5E7EB')
-        .selectedColor('#3B82F6')
+        .selectedColor('#667eea')
         .onChange((value: number) => {
           this.sliderValue = value;
         })
+
+      // 批量结果缩略图（如果有）
+      if (this.batchResults.length > 1) {
+        Column() {
+            Text('批量结果')
+              .fontSize(16)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#1A1F36')
+              .margin({ bottom: 12 })
+              .width('100%')
+
+          Scroll() {
+            Row() {
+              ForEach(this.batchResults, (result: BatchResult, index: number) => {
+                Column() {
+                  Stack() {
+                    Image(result.afterUrl || result.beforeUrl)
+                      .width(80)
+                      .height(80)
+                      .borderRadius(8)
+                      .objectFit(ImageFit.Cover)
+                      .backgroundColor('#F3F4F6')
+
+                    // 选中指示器
+                    if (index === this.currentResultIndex) {
+                      Stack() {
+                        Circle({ width: 20, height: 20 })
+                          .fill('#667eea')
+                        Text('✓')
+                          .fontSize(12)
+                          .fontColor('#FFFFFF')
+                      }
+                      .width(20)
+                      .height(20)
+                      .position({ x: 60, y: 4 })
+                    }
+                  }
+                  .width(80)
+                  .height(80)
+                  .margin({ right: 12 })
+                  .onClick(() => {
+                    this.currentResultIndex = index;
+                    // 更新当前显示的图片
+                    this.originalImagePath = result.beforeUrl;
+                    this.processedImagePath = result.afterUrl;
+                    this.fileName = result.filename;
+                  })
+
+                  Text(result.filename)
+                    .fontSize(11)
+                    .fontColor('#6B7280')
+                    .maxLines(1)
+                    .textOverflow({ overflow: TextOverflow.Ellipsis })
+                    .width(80)
+                    .margin({ top: 4 })
+                    .textAlign(TextAlign.Center)
+                }
+                .margin({ right: 12 })
+              }, (result: BatchResult, index: number) => `${result.id}-${index}`)
+            }
+            .padding({ left: 0, right: 0 })
+          }
+          .scrollable(ScrollDirection.Horizontal)
+          .scrollBar(BarState.Off)
+          .width('100%')
+          .margin({ left: -20, right: -20 })
+          .padding({ left: 20, right: 20 })
+        }
+        .width('100%')
+        .margin({ top: 24 })
+      }
     }
     .width('100%')
     .margin({ top: 20 })
     .padding({ left: 20, right: 20 })
+    .alignItems(HorizontalAlign.Center)
   }
 
   // 构建信息行

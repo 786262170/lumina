@@ -10,6 +10,9 @@ struct BatchProcess {
   @State selectedBackgroundIndex: number = 0; // 选中的背景模板索引
   @State selectedSizePreset: string = '2000x2000'; // 选中的尺寸预设
   @State isProcessing: boolean = false; // 是否正在处理
+  @State processingProgress: number = 0; // 处理进度（0-100）
+  @State imageStatuses: Map<number, 'pending' | 'processing' | 'completed' | 'error'> = new Map(); // 每张图片的处理状态
+  @State imageProgresses: Map<number, number> = new Map(); // 每张图片的处理进度
 
   // 背景模板选项
   private backgroundTemplates: BatchBackgroundTemplate[] = [
@@ -22,6 +25,21 @@ struct BatchProcess {
   // 尺寸预设选项
   private sizePresets: string[] = ['2000x2000', '1600x1600', '自定义'];
 
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
+
   aboutToAppear() {
     // 页面初始化
   }
@@ -31,22 +49,29 @@ struct BatchProcess {
       // 顶部导航栏
       Row() {
         // 返回按钮
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .fillColor('#1F2937')
-          .onClick(() => {
-            router.back();
-          })
+        Button() {
+          Text('<')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#1A1F36')
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
+        .onClick(() => {
+          this.handleBack();
+        })
 
         // 标题
         Text('批量处理')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-          .margin({ left: -24 })
+          .margin({ left: -40 })
 
         // 更多选项按钮
         Image($r('app.media.startIcon'))
@@ -127,19 +152,76 @@ struct BatchProcess {
                         .borderRadius(8)
                         .objectFit(ImageFit.Cover)
                         .backgroundColor('#F3F4F6')
+                        .opacity(this.imageStatuses.get(index) === 'processing' ? 0.6 : 1)
 
-                      // 删除按钮
-                      Image($r('app.media.startIcon'))
+                      // 处理状态遮罩
+                      if (this.imageStatuses.get(index) === 'processing' || this.imageStatuses.get(index) === 'completed') {
+                        Stack() {
+                          // 进度条背景
+                          Column()
+                            .width(80)
+                            .height(4)
+                            .backgroundColor('rgba(0, 0, 0, 0.3)')
+                            .borderRadius(2)
+
+                          // 进度条
+                          if (this.imageStatuses.get(index) === 'processing') {
+                            Column()
+                              .width(`${this.imageProgresses.get(index) || 0}%`)
+                              .height(4)
+                              .backgroundColor('#667eea')
+                              .borderRadius(2)
+                          }
+
+                          // 完成图标
+                          if (this.imageStatuses.get(index) === 'completed') {
+                            Stack() {
+                              Circle({ width: 20, height: 20 })
+                                .fill('#10B981')
+                              Text('✓')
+                                .fontSize(12)
+                                .fontColor('#FFFFFF')
+                                .fontWeight(FontWeight.Medium)
+                            }
+                            .width(20)
+                            .height(20)
+                            .position({ x: 30, y: 30 })
+                          }
+                        }
+                        .width(80)
+                        .height(80)
+                        .position({ x: 0, y: 0 })
+                      }
+
+                      // 错误状态
+                      if (this.imageStatuses.get(index) === 'error') {
+                        Stack() {
+                          Circle({ width: 20, height: 20 })
+                            .fill('#EF4444')
+                          Text('×')
+                            .fontSize(12)
+                            .fontColor('#FFFFFF')
+                            .fontWeight(FontWeight.Medium)
+                        }
                         .width(20)
                         .height(20)
-                        .fillColor('#FFFFFF')
-                        .backgroundColor('#EF4444')
-                        .borderRadius(10)
-                        .padding(4)
-                        .margin({ top: 4, right: 4 })
-                        .onClick(() => {
-                          this.removeImage(index);
-                        })
+                        .position({ x: 60, y: 4 })
+                      }
+
+                      // 删除按钮（仅在待处理状态显示）
+                      if (this.imageStatuses.get(index) === 'pending' || !this.imageStatuses.has(index)) {
+                        Image($r('app.media.startIcon'))
+                          .width(20)
+                          .height(20)
+                          .fillColor('#FFFFFF')
+                          .backgroundColor('#EF4444')
+                          .borderRadius(10)
+                          .padding(4)
+                          .margin({ top: 4, right: 4 })
+                          .onClick(() => {
+                            this.removeImage(index);
+                          })
+                      }
                     }
                     .margin({ right: 12 })
                   }, (path: string, index: number) => `${path}_${index}`)
@@ -262,8 +344,42 @@ struct BatchProcess {
       .layoutWeight(1)
       .scrollBar(BarState.Auto)
 
+      // 处理进度显示（处理中时显示）
+      if (this.isProcessing) {
+        Column() {
+          Row() {
+            Text(`处理中: ${Math.floor(this.processingProgress)}%`)
+              .fontSize(14)
+              .fontColor('#1A1F36')
+              .layoutWeight(1)
+
+            Text(`${this.getCompletedCount()}/${this.selectedImagePaths.length}`)
+              .fontSize(14)
+              .fontColor('#6B7280')
+          }
+          .width('100%')
+          .margin({ bottom: 8 })
+
+          // 总进度条
+          Progress({
+            value: this.processingProgress,
+            total: 100,
+            type: ProgressType.Linear
+          })
+            .width('100%')
+            .height(8)
+            .color('#667eea')
+            .backgroundColor('#E5E7EB')
+        }
+        .width('100%')
+        .padding(16)
+        .backgroundColor('#FFFFFF')
+        .borderRadius(12)
+        .margin({ left: 20, right: 20, bottom: 12 })
+      }
+
       // 底部操作按钮
-      Button('开始批量处理')
+      Button(this.isProcessing ? '处理中...' : '开始批量处理')
         .type(ButtonType.Normal)
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
@@ -279,8 +395,11 @@ struct BatchProcess {
           ]
         })
         .enabled(this.selectedImagePaths.length > 0 && !this.isProcessing)
+        .opacity(this.isProcessing ? 0.6 : 1)
         .onClick(() => {
-          this.startBatchProcessing();
+          if (!this.isProcessing) {
+            this.startBatchProcessing();
+          }
         })
         .margin({ left: 20, right: 20, bottom: 20 })
     }
@@ -322,11 +441,24 @@ struct BatchProcess {
     }
   }
 
+  // 获取已完成数量
+  getCompletedCount(): number {
+    let count = 0;
+    this.imageStatuses.forEach((status) => {
+      if (status === 'completed') {
+        count++;
+      }
+    });
+    return count;
+  }
+
   // 移除某张图片
   removeImage(index: number) {
     if (index >= 0 && index < this.selectedImagePaths.length) {
       this.selectedImagePaths.splice(index, 1);
       this.selectedImageUris.splice(index, 1);
+      this.imageStatuses.delete(index);
+      this.imageProgresses.delete(index);
     }
   }
 

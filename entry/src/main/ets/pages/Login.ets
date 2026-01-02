@@ -1,5 +1,5 @@
 import { router } from '@kit.ArkUI';
-import { LoginService } from '../common/services/LoginService';
+import { AuthService } from '../common/services/AuthService';
 import { UserService } from '../common/services/UserService';
 
 @Entry
@@ -13,8 +13,11 @@ struct Login {
   @State showCodeHint: boolean = false; // 显示验证码提示
   @State codeHint: string = ''; // 验证码提示内容
   @State errorMessage: string = ''; // 错误提示
+  @State phoneError: string = ''; // 手机号错误提示
+  @State codeError: string = ''; // 验证码错误提示
+  @State isFormValid: boolean = false; // 表单是否有效
 
-  private loginService: LoginService = new LoginService();
+  private authService: AuthService = AuthService.getInstance();
   private userService: UserService = UserService.getInstance();
   private timer: number | null = null;
 
@@ -38,13 +41,53 @@ struct Login {
     }
   }
 
+  // 验证手机号
+  validatePhoneNumber(): boolean {
+    if (!this.phoneNumber) {
+      this.phoneError = '请输入手机号';
+      return false;
+    }
+    if (this.phoneNumber.length !== 11) {
+      this.phoneError = '手机号必须为11位';
+      return false;
+    }
+    if (!/^1[3-9]\d{9}$/.test(this.phoneNumber)) {
+      this.phoneError = '请输入正确的手机号';
+      return false;
+    }
+    this.phoneError = '';
+    return true;
+  }
+
+  // 验证验证码
+  validateVerificationCode(): boolean {
+    if (!this.verificationCode) {
+      this.codeError = '请输入验证码';
+      return false;
+    }
+    if (this.verificationCode.length !== 6) {
+      this.codeError = '验证码必须为6位';
+      return false;
+    }
+    if (!/^\d{6}$/.test(this.verificationCode)) {
+      this.codeError = '验证码必须为数字';
+      return false;
+    }
+    this.codeError = '';
+    return true;
+  }
+
+  // 验证整个表单
+  validateForm(): boolean {
+    const phoneValid = this.validatePhoneNumber();
+    const codeValid = this.validateVerificationCode();
+    this.isFormValid = phoneValid && codeValid;
+    return this.isFormValid;
+  }
+
   // 获取验证码
   async getVerificationCode() {
-    if (!this.phoneNumber || this.phoneNumber.length !== 11) {
-      this.errorMessage = '请输入11位手机号';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 2000);
+    if (!this.validatePhoneNumber()) {
       return;
     }
     
@@ -53,14 +96,8 @@ struct Login {
     this.errorMessage = '';
     
     try {
-      const result = await this.loginService.sendVerificationCode(this.phoneNumber);
+      const result = await this.authService.sendCode(this.phoneNumber);
       if (result.success) {
-        // 显示验证码提示（调试用）
-        this.codeHint = result.code || '123456';
-        this.showCodeHint = true;
-        // 自动填充验证码（调试用）
-        this.verificationCode = result.code || '123456';
-        
         // 开始倒计时
         this.timer = setInterval(() => {
           if (this.countdown > 0) {
@@ -92,19 +129,19 @@ struct Login {
     this.codeHint = '123456';
   }
 
-  // 快速登录（跳过验证码）
+  // 快速登录（跳过验证码）- 使用游客模式
   async quickLogin() {
     this.isLoading = true;
     this.errorMessage = '';
     try {
-      const result = await this.loginService.quickLogin();
-      if (result.success) {
-        router.replaceUrl({ url: 'pages/Index' });
-      } else {
-        this.errorMessage = result.message || '登录失败';
-      }
+      const result = await this.authService.guestMode();
+      // 登录成功，跳转到主页
+      router.replaceUrl({ url: 'pages/Index' });
     } catch (error) {
-      this.errorMessage = '登录失败，请重试';
+      this.errorMessage = error.message || '登录失败，请重试';
+      setTimeout(() => {
+        this.errorMessage = '';
+      }, 3000);
     } finally {
       this.isLoading = false;
     }
@@ -112,8 +149,9 @@ struct Login {
 
   // 登录
   async handleLogin() {
-    if (!this.phoneNumber || !this.verificationCode) {
-      this.errorMessage = '请输入手机号和验证码';
+    // 再次验证表单
+    if (!this.validateForm()) {
+      this.errorMessage = '请检查输入信息';
       setTimeout(() => {
         this.errorMessage = '';
       }, 2000);
@@ -123,18 +161,11 @@ struct Login {
     this.isLoading = true;
     this.errorMessage = '';
     try {
-      const result = await this.loginService.login(this.phoneNumber, this.verificationCode);
-      if (result.success) {
-        // 登录成功，跳转到主页
-        router.replaceUrl({ url: 'pages/Index' });
-      } else {
-        this.errorMessage = result.message || '登录失败';
-        setTimeout(() => {
-          this.errorMessage = '';
-        }, 3000);
-      }
+      const result = await this.authService.login(this.phoneNumber, this.verificationCode);
+      // 登录成功，跳转到主页
+      router.replaceUrl({ url: 'pages/Index' });
     } catch (error) {
-      this.errorMessage = '登录失败，请重试';
+      this.errorMessage = error.message || '登录失败，请重试';
       setTimeout(() => {
         this.errorMessage = '';
       }, 3000);
@@ -148,17 +179,16 @@ struct Login {
     this.isLoading = true;
     this.errorMessage = '';
     try {
-      const result = await this.loginService.weChatLogin();
-      if (result.success) {
-        router.replaceUrl({ url: 'pages/Index' });
-      } else {
-        this.errorMessage = result.message || '微信登录失败';
-        setTimeout(() => {
-          this.errorMessage = '';
-        }, 3000);
-      }
+      // TODO: 获取微信授权码
+      // 在HarmonyOS中，需要使用微信SDK获取授权码
+      // 这里先使用模拟的授权码，实际需要调用微信SDK
+      const wechatCode = 'mock_wechat_code'; // 实际应该从微信SDK获取
+      
+      const result = await this.authService.wechatLogin(wechatCode);
+      // 登录成功，跳转到主页
+      router.replaceUrl({ url: 'pages/Index' });
     } catch (error) {
-      this.errorMessage = '微信登录失败，请重试';
+      this.errorMessage = error.message || '微信登录失败，请重试';
       setTimeout(() => {
         this.errorMessage = '';
       }, 3000);
@@ -297,6 +327,8 @@ struct Login {
               .padding({ left: 12, right: 12 })
               .onChange((value: string) => {
                 this.phoneNumber = value;
+                this.validatePhoneNumber();
+                this.validateForm();
               })
           }
           .width('100%')
@@ -340,13 +372,17 @@ struct Login {
               .padding({ left: 16, right: 16 })
               .onChange((value: string) => {
                 this.verificationCode = value;
+                this.validateVerificationCode();
+                this.validateForm();
               })
 
             Button(this.countdown > 0 ? `${this.countdown}s` : $r('app.string.get_verification_code'))
               .type(ButtonType.Normal)
               .fontSize(14)
-              .fontColor('#3B82F6')
+              .fontColor(this.countdown > 0 ? '#9CA3AF' : '#3B82F6')
               .backgroundColor('#FFFFFF')
+              .enabled(this.countdown === 0 && this.phoneNumber.length === 11)
+              .opacity(this.countdown > 0 || this.phoneNumber.length !== 11 ? 0.5 : 1)
               .border({ width: 1, color: '#3B82F6' })
               .borderRadius(8)
               .width(100)
@@ -359,8 +395,20 @@ struct Login {
           .width('100%')
           .height(48)
           .borderRadius(8)
-          .border({ width: 1, color: '#E5E7EB' })
+          .border({ 
+            width: 1, 
+            color: this.codeError ? '#EF4444' : '#E5E7EB' 
+          })
           .backgroundColor('#FFFFFF')
+
+          // 验证码错误提示
+          if (this.codeError) {
+            Text(this.codeError)
+              .fontSize(12)
+              .fontColor('#EF4444')
+              .margin({ top: 4 })
+              .width('100%')
+          }
         }
         .width('100%')
         .margin({ bottom: 32 })
@@ -385,11 +433,14 @@ struct Login {
       .type(ButtonType.Normal)
       .width('100%')
       .height(50)
-      .backgroundColor(this.isLoading ? '#9CA3AF' : '#3B82F6')
+      .backgroundColor(this.isLoading || !this.isFormValid ? '#9CA3AF' : '#3B82F6')
       .borderRadius(8)
-      .enabled(!this.isLoading)
+      .enabled(!this.isLoading && this.isFormValid)
+      .opacity(this.isLoading || !this.isFormValid ? 0.5 : 1)
       .onClick(() => {
-        this.handleLogin();
+        if (this.isFormValid) {
+          this.handleLogin();
+        }
       })
       .margin({ bottom: 24 })
 

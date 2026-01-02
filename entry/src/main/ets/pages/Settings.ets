@@ -11,6 +11,7 @@ struct Settings {
   @State storageUsed: string = '0 MB'; // 已用存储空间
   @State storageTotal: string = '100 MB'; // 总存储空间
   @State storageProgress: number = 0; // 存储进度百分比
+  @State showQualityPicker: boolean = false; // 是否显示质量选择器
   
   private userService: UserService = UserService.getInstance();
   
@@ -40,6 +41,21 @@ struct Settings {
     this.storageProgress = total > 0 ? (used / total) * 100 : 0;
   }
 
+  // 返回上一页
+  handleBack() {
+    console.info('handleBack 被调用');
+    try {
+      router.back();
+      console.info('router.back() 已调用');
+    } catch (err) {
+      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      // 如果无法返回，则返回到首页
+      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
+        console.error(`跳转首页失败: ${error.message}`);
+      });
+    }
+  }
+
   // 退出登录
   async handleLogout() {
     await this.userService.logout();
@@ -54,28 +70,33 @@ struct Settings {
       // 顶部导航栏
       Row() {
         // 返回按钮
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .fillColor('#1F2937')
-          .onClick(() => {
-            router.back();
-          })
+        Button() {
+          Text('<')
+            .fontSize(20)
+            .fontWeight(FontWeight.Medium)
+            .fontColor('#1A1F36')
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
+        .onClick(() => {
+          this.handleBack();
+        })
 
         // 标题
         Text('设置')
-          .fontSize(18)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
+          .fontSize(20)
+          .fontWeight(FontWeight.Medium)
+          .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-          .margin({ left: -24 })
+          .margin({ left: -40 })
 
         // 占位，保持标题居中
-        Image($r('app.media.startIcon'))
-          .width(24)
-          .height(24)
-          .opacity(0)
+        Blank()
+          .width(40)
       }
       .width('100%')
       .height(56)
@@ -181,29 +202,82 @@ struct Settings {
 
             // 默认输出质量
             Row() {
-              Text('默认输出质量')
-                .fontSize(16)
-                .fontColor('#1F2937')
-                .layoutWeight(1)
+              Column() {
+                Text('默认输出质量')
+                  .fontSize(16)
+                  .fontColor('#1F2937')
+                  .margin({ bottom: 2 })
 
-              Text(this.defaultQuality)
-                .fontSize(14)
-                .fontColor('#6B7280')
-                .margin({ right: 8 })
+                Text('选择图片处理后的默认质量')
+                  .fontSize(12)
+                  .fontColor('#6B7280')
+              }
+              .alignItems(HorizontalAlign.Start)
+              .layoutWeight(1)
 
-              Image($r('app.media.startIcon'))
-                .width(20)
-                .height(20)
-                .fillColor('#9CA3AF')
+              Row() {
+                Text(this.defaultQuality)
+                  .fontSize(14)
+                  .fontColor('#667eea')
+                  .fontWeight(FontWeight.Medium)
+                  .margin({ right: 8 })
+
+                Image($r('app.media.startIcon'))
+                  .width(20)
+                  .height(20)
+                  .fillColor('#9CA3AF')
+              }
+              .alignItems(VerticalAlign.Center)
             }
             .width('100%')
             .height(56)
             .padding({ left: 20, right: 20 })
             .alignItems(VerticalAlign.Center)
             .onClick(() => {
-              // 显示质量选择器（后续实现）
-              console.info('显示质量选择器');
+              this.showQualityPicker = !this.showQualityPicker;
             })
+
+            // 质量选择器（展开时显示）
+            if (this.showQualityPicker) {
+              Column() {
+                Divider()
+                  .color('#E5E7EB')
+                  .margin({ left: 20, right: 20, bottom: 12 })
+
+                ForEach(this.qualityOptions, (quality: string) => {
+                  Row() {
+                    Text(quality)
+                      .fontSize(14)
+                      .fontColor(this.defaultQuality === quality ? '#667eea' : '#1F2937')
+                      .fontWeight(this.defaultQuality === quality ? FontWeight.Medium : FontWeight.Regular)
+                      .layoutWeight(1)
+
+                    if (this.defaultQuality === quality) {
+                      Stack() {
+                        Circle({ width: 20, height: 20 })
+                          .fill('#667eea')
+                        Text('✓')
+                          .fontSize(12)
+                          .fontColor('#FFFFFF')
+                          .fontWeight(FontWeight.Medium)
+                      }
+                      .width(20)
+                      .height(20)
+                    }
+                  }
+                  .width('100%')
+                  .height(44)
+                  .padding({ left: 20, right: 20 })
+                  .alignItems(VerticalAlign.Center)
+                  .onClick(() => {
+                    this.defaultQuality = quality;
+                    this.showQualityPicker = false;
+                  })
+                }, (quality: string) => quality)
+              }
+              .width('100%')
+              .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
+            }
           }
           .width('100%')
           .backgroundColor('#FFFFFF')
@@ -238,20 +312,43 @@ struct Settings {
             })
 
             // 存储进度条
-            Row() {
-              // 进度条背景
+            Column() {
               Row() {
-                // 已用部分（紫色）
-                Row()
-                  .width(`${this.storageProgress}%`)
-                  .height(4)
-                  .backgroundColor('#6366F1')
-                  .borderRadius(2)
+                Text('已使用')
+                  .fontSize(12)
+                  .fontColor('#6B7280')
+                Blank()
+                Text(`${this.storageProgress.toFixed(1)}%`)
+                  .fontSize(12)
+                  .fontColor('#6B7280')
               }
               .width('100%')
-              .height(4)
-              .backgroundColor('#E5E7EB')
-              .borderRadius(2)
+              .margin({ bottom: 8 })
+
+              // 进度条
+              Stack() {
+                // 背景
+                Column()
+                  .width('100%')
+                  .height(8)
+                  .backgroundColor('#E5E7EB')
+                  .borderRadius(4)
+
+                // 进度条（渐变）
+                Column()
+                  .width(`${this.storageProgress}%`)
+                  .height(8)
+                  .borderRadius(4)
+                  .linearGradient({
+                    angle: 90,
+                    colors: [
+                      ['#667eea', 0.0],
+                      ['#764ba2', 1.0]
+                    ]
+                  })
+              }
+              .width('100%')
+              .height(8)
             }
             .width('100%')
             .padding({ left: 20, right: 20, bottom: 16 })
