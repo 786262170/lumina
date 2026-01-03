@@ -35,10 +35,10 @@ Authorization: Bearer {token}
 
 ## 🌐 API 基础信息
 
-### 开发环境
-- **Base URL**: `http://localhost:8000`
-- **API 文档**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+### 开发/测试环境
+- **Base URL**: `http://8.140.227.147:8000`
+- **API 文档**: `http://8.140.227.147:8000/docs`
+- **ReDoc**: `http://8.140.227.147:8000/redoc`
 
 ### 生产环境
 - **Base URL**: `https://api.lumina.ai` (根据实际配置)
@@ -1160,7 +1160,7 @@ Authorization: Bearer {token}
 import http from '@ohos.net.http';
 
 // API 基础配置
-const API_BASE_URL = 'http://localhost:8000/v1';
+const API_BASE_URL = 'http://8.140.227.147:8000/v1';
 let accessToken: string = '';
 
 // 发送 HTTP 请求
@@ -1385,5 +1385,5 @@ async function getWorks(
 - [后端项目 README](../lumina-api/README.md)
 - [JWT和Redis令牌管理](../lumina-api/docs/JWT和Redis令牌管理.md)
 - [微信登录配置](../lumina-api/docs/鸿蒙微信登录.md)
-- [API Swagger 文档](http://localhost:8000/docs)
+- [API Swagger 文档](http://8.140.227.147:8000/docs)
 

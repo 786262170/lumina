@@ -1,6 +1,8 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { picker } from '@kit.CoreFileKit';
 import { ToolItem } from '../common/types/CommonTypes';
+import { TopNavBar } from '../common/components/TopNavBar';
 
 // 背景模板接口
 interface BackgroundTemplate {
@@ -32,21 +34,28 @@ struct Workbench {
   @State canRedo: boolean = false; // 是否可以重做
   @State isDrawerOpen: boolean = false; // 抽屉是否打开
   @State selectedBackground: string = 'white'; // 选中的背景模板
+  @State backgroundOpacity: number = 100; // 背景透明度 (0-100)
   @State selectedSize: string = 'amazon'; // 选中的尺寸预设
   @State outputQuality: number = 85; // 输出质量
+  @State selectedLighting: string = '自然光'; // 选中的光效类型
+  @State selectedFilter: string = '原图'; // 选中的滤镜效果
+  @State filterIntensity: number = 70; // 滤镜强度 (0-100)
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
+  async handleBack() {
+    console.info('[Workbench] handleBack 被调用');
     try {
-      router.back();
-      console.info('router.back() 已调用');
+      await RouterService.getInstance().goBack();
     } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[Workbench] 返回失败: ${errorMsg}`);
       // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+      try {
+        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const navErrorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[Workbench] 跳转首页失败: ${navErrorMsg}`);
+      }
     }
   }
 
@@ -105,72 +114,36 @@ struct Workbench {
 
   build() {
     Column() {
-      // 顶部导航栏（带返回按钮）
-      Row() {
-        // 返回按钮
-        Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
-        }
-        .type(ButtonType.Normal)
-        .width(40)
-        .height(40)
-        .backgroundColor('#F8F9FC')
-        .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
-
-        // 标题
-        Text('工作台')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#1A1F36')
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-
-        // 占位，保持标题居中
-        Blank()
-          .width(40)
-      }
-      .width('100%')
-      .height(56)
-      .padding({ left: 16, right: 16 })
-      .justifyContent(FlexAlign.SpaceBetween)
-      .alignItems(VerticalAlign.Center)
-      .backgroundColor('#FFFFFF')
-      .border({ width: { bottom: 1 }, color: '#E5E7EB' })
+      // 顶部导航栏
+      TopNavBar({ title: '工作台', showBack: true })
 
       // 主内容区
-      Row() {
-        // 左侧工具栏
-        Column() {
+    Row() {
+      // 左侧工具栏
+      Column() {
         ForEach(this.tools, (tool: ToolItem) => {
           Button() {
-            Image($r('app.media.startIcon'))
-              .width(24)
-              .height(24)
-              .fillColor(this.selectedTool === tool.id ? '#FFFFFF' : '#6B7280')
-          }
+              Image($r('app.media.startIcon'))
+                .width(24)
+                .height(24)
+                .fillColor(this.selectedTool === tool.id ? '#FFFFFF' : '#6B7280')
+            }
           .type(ButtonType.Normal)
           .width(36)
           .height(36)
           .borderRadius(12)
           .backgroundColor(this.selectedTool === tool.id ? '#667eea' : '#F8F9FC')
           .margin({ bottom: 8 })
-          .onClick(() => {
-            this.handleToolClick(tool.id);
+            .onClick(() => {
+              this.handleToolClick(tool.id);
             // 打开抽屉
             if (tool.id >= 0) {
               this.isDrawerOpen = true;
             }
-          })
+            })
         }, (tool: ToolItem) => tool.id.toString())
-      }
-      .width(48)
+          }
+          .width(48)
       .padding({ top: 16, bottom: 16 })
       .backgroundColor('#FFFFFF')
       .border({ width: { right: 1 }, color: '#E5E7EB' })
@@ -542,9 +515,8 @@ struct Workbench {
   handleGallery() {
     console.info('打开图库');
     // 跳转到背景模板页面
-    router.pushUrl({
-      url: 'pages/BackgroundTemplates'
-    }).catch((err: Error) => {
+    RouterService.getInstance().navigateTo('pages/BackgroundTemplates')
+      .catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }
@@ -582,9 +554,28 @@ struct Workbench {
   }
 
   // 应用
-  handleApply() {
+  async handleApply() {
     console.info('应用更改');
-    // TODO: 实现应用功能
+    // 跳转到结果展示页面
+    const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+    params['imagePath'] = this.imagePath;
+    params['imageUri'] = this.imageUri;
+    params['isBatch'] = this.isBatch;
+    if (this.isBatch) {
+      params['imagePaths'] = this.imagePaths;
+      params['imageUris'] = this.imageUris;
+    }
+    // 传递处理参数
+    params['background'] = this.selectedBackground;
+    params['size'] = this.selectedSize;
+    params['quality'] = this.outputQuality;
+    params['lighting'] = this.selectedLighting;
+    params['filter'] = this.selectedFilter;
+    
+    await RouterService.getInstance().navigateTo('pages/ProcessResult', params)
+      .catch((err: Error) => {
+        console.error(`跳转到结果页面失败: ${err.message}`);
+      });
   }
 
   // 切换到上一张图片（批量模式）
@@ -856,6 +847,13 @@ struct Workbench {
               if (template.gradient) {
                 // 渐变背景
                 Blank()
+                  .linearGradient({
+                    angle: 135,
+                    colors: [
+                      ['#667eea', 0.0],
+                      ['#764ba2', 1.0]
+                    ]
+                  })
               } else {
                 Blank()
                   .backgroundColor(template.color || '#FFFFFF')
@@ -881,6 +879,43 @@ struct Workbench {
       .rowsGap(12)
       .width('100%')
       .margin({ bottom: 24 })
+
+      // 背景透明度滑块
+      Text('背景透明度')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor('#1A1F36')
+        .margin({ bottom: 16 })
+        .width('100%')
+
+      Slider({
+        value: this.backgroundOpacity,
+        min: 0,
+        max: 100,
+        step: 1,
+        style: SliderStyle.OutSet
+      })
+        .blockColor('#667eea')
+        .selectedColor('#667eea')
+        .trackColor('#E5E7EB')
+        .showSteps(false)
+        .showTips(true)
+        .onChange((value: number) => {
+          this.backgroundOpacity = value;
+        })
+        .width('100%')
+        .margin({ bottom: 8 })
+
+      Row() {
+        Text('0%')
+          .fontSize(12)
+          .fontColor('#C7C7CC')
+        Blank()
+        Text('100%')
+          .fontSize(12)
+          .fontColor('#C7C7CC')
+      }
+      .width('100%')
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -897,10 +932,29 @@ struct Workbench {
         .margin({ bottom: 16 })
         .width('100%')
 
-      Text('功能开发中...')
-        .fontSize(14)
-        .fontColor('#6B7280')
-        .width('100%')
+      Column() {
+        ForEach(['自然光', '工作室光', '柔光', '高光'], (light: string) => {
+          Button() {
+            Text(light)
+              .fontSize(14)
+              .fontColor(this.selectedLighting === light ? '#FFFFFF' : '#1A1F36')
+          }
+          .type(ButtonType.Normal)
+          .width('100%')
+          .height(44)
+          .borderRadius(8)
+          .backgroundColor(this.selectedLighting === light ? '#667eea' : '#F8F9FC')
+          .border({
+            width: this.selectedLighting === light ? 0 : 1,
+            color: '#E5E7EB'
+          })
+          .margin({ bottom: 8 })
+          .onClick(() => {
+            this.selectedLighting = light;
+          })
+        }, (light: string) => light)
+      }
+      .width('100%')
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -910,48 +964,89 @@ struct Workbench {
   @Builder
   buildSizeProperties() {
     Column() {
-      Text('输出尺寸')
+      Text('尺寸预设')
         .fontSize(16)
         .fontWeight(FontWeight.Medium)
         .fontColor('#1A1F36')
         .margin({ bottom: 16 })
         .width('100%')
 
-      Row() {
+      Grid() {
         ForEach(this.sizePresets, (preset: SizePreset) => {
-          Button() {
-            Column() {
-              Text(preset.label)
-                .fontSize(14)
-                .fontWeight(FontWeight.Medium)
-                .fontColor(this.selectedSize === preset.id ? '#FFFFFF' : '#1A1F36')
-              if (preset.dimensions) {
-                Text(preset.dimensions)
-                  .fontSize(11)
-                  .fontColor(this.selectedSize === preset.id ? '#FFFFFF' : '#6B7280')
-                  .opacity(this.selectedSize === preset.id ? 0.9 : 0.7)
-                  .margin({ top: 2 })
+          GridItem() {
+            Button() {
+              Column() {
+                Text(preset.label)
+                  .fontSize(14)
+                  .fontWeight(FontWeight.Medium)
+                  .fontColor(this.selectedSize === preset.id ? '#FFFFFF' : '#1A1F36')
+                if (preset.dimensions) {
+                  Text(preset.dimensions)
+                    .fontSize(11)
+                    .fontColor(this.selectedSize === preset.id ? '#FFFFFF' : '#6B7280')
+                    .opacity(this.selectedSize === preset.id ? 0.9 : 0.7)
+                    .margin({ top: 2 })
+                }
               }
+              .justifyContent(FlexAlign.Center)
             }
-            .justifyContent(FlexAlign.Center)
+            .type(ButtonType.Normal)
+            .width('100%')
+            .height(60)
+            .borderRadius(8)
+            .backgroundColor(this.selectedSize === preset.id ? '#667eea' : '#F8F9FC')
+            .border({
+              width: this.selectedSize === preset.id ? 0 : 1,
+              color: '#E5E7EB'
+            })
+            .onClick(() => {
+              this.selectedSize = preset.id;
+            })
           }
-          .type(ButtonType.Normal)
-          .width(80)
-          .height(60)
-          .borderRadius(8)
-          .backgroundColor(this.selectedSize === preset.id ? '#667eea' : '#F8F9FC')
-          .border({
-            width: this.selectedSize === preset.id ? 0 : 1,
-            color: '#E5E7EB'
-          })
-          .margin({ right: 8 })
-          .onClick(() => {
-            this.selectedSize = preset.id;
-          })
         }, (preset: SizePreset) => preset.id)
       }
+      .columnsTemplate('1fr 1fr')
+      .columnsGap(8)
+      .rowsGap(8)
       .width('100%')
       .margin({ bottom: 24 })
+
+      // 输出质量滑块
+      Text('输出质量')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor('#1A1F36')
+        .margin({ bottom: 16 })
+        .width('100%')
+
+      Slider({
+        value: this.outputQuality,
+        min: 0,
+        max: 100,
+        step: 1,
+        style: SliderStyle.OutSet
+      })
+        .blockColor('#667eea')
+        .selectedColor('#667eea')
+        .trackColor('#E5E7EB')
+        .showSteps(false)
+        .showTips(true)
+        .onChange((value: number) => {
+          this.outputQuality = value;
+        })
+        .width('100%')
+        .margin({ bottom: 8 })
+
+      Row() {
+        Text(this.outputQuality >= 80 ? '高' : this.outputQuality >= 50 ? '中' : '低')
+          .fontSize(12)
+          .fontColor('#6B7280')
+        Blank()
+        Text(`${this.outputQuality}%`)
+          .fontSize(12)
+          .fontColor('#C7C7CC')
+      }
+      .width('100%')
     }
     .width('100%')
     .alignItems(HorizontalAlign.Start)
@@ -968,9 +1063,58 @@ struct Workbench {
         .margin({ bottom: 16 })
         .width('100%')
 
-      Text('功能开发中...')
-        .fontSize(14)
-        .fontColor('#6B7280')
+      Grid() {
+        ForEach(['原图', '清新', '复古', '黑白', '暖色', '冷色'], (filter: string) => {
+          GridItem() {
+            Button() {
+              Text(filter)
+                .fontSize(13)
+                .fontColor(this.selectedFilter === filter ? '#FFFFFF' : '#1A1F36')
+            }
+            .type(ButtonType.Normal)
+            .width('100%')
+            .height(40)
+            .borderRadius(8)
+            .backgroundColor(this.selectedFilter === filter ? '#667eea' : '#F8F9FC')
+            .border({
+              width: this.selectedFilter === filter ? 0 : 1,
+              color: '#E5E7EB'
+            })
+            .onClick(() => {
+              this.selectedFilter = filter;
+            })
+          }
+        }, (filter: string) => filter)
+      }
+      .columnsTemplate('1fr 1fr 1fr')
+      .columnsGap(8)
+      .rowsGap(8)
+      .width('100%')
+      .margin({ bottom: 24 })
+
+      // 滤镜强度滑块
+      Text('强度')
+        .fontSize(16)
+        .fontWeight(FontWeight.Medium)
+        .fontColor('#1A1F36')
+        .margin({ bottom: 16 })
+        .width('100%')
+
+      Slider({
+        value: this.filterIntensity,
+        min: 0,
+        max: 100,
+        step: 1,
+        style: SliderStyle.OutSet
+      })
+        .blockColor('#667eea')
+        .selectedColor('#667eea')
+        .trackColor('#E5E7EB')
+        .showSteps(false)
+        .showTips(true)
+        .onChange((value: number) => {
+          this.filterIntensity = value;
+        })
         .width('100%')
     }
     .width('100%')

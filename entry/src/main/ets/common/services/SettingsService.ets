@@ -1,4 +1,5 @@
 import { ApiClient } from './ApiClient';
+import { ToastUtil } from '../utils/ToastUtil';
 
 /**
  * 图片格式
@@ -52,7 +53,18 @@ export class SettingsService {
    * 更新应用设置
    */
   async updateSettings(request: UpdateSettingsRequest): Promise<AppSettings> {
-    return this.apiClient.put<AppSettings>('/settings', request);
+    try {
+      const settings = await this.apiClient.put<AppSettings>('/settings', request);
+      ToastUtil.showSuccess('设置已保存');
+      return settings;
+    } catch (error) {
+      // 错误提示已在 ApiClient 中显示
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(String(error));
+      }
+    }
   }
 }
 

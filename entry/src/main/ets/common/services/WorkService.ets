@@ -1,5 +1,6 @@
 import { ApiClient } from './ApiClient';
 import { SceneType } from './ImageService';
+import { ToastUtil } from '../utils/ToastUtil';
 
 /**
  * 作品信息
@@ -105,7 +106,18 @@ export class WorkService {
    * 保存作品
    */
   async saveWork(request: SaveWorkRequest): Promise<Work> {
-    return this.apiClient.post<Work>('/works', request);
+    try {
+      const work = await this.apiClient.post<Work>('/works', request);
+      ToastUtil.showSuccess('作品保存成功');
+      return work;
+    } catch (error) {
+      // 错误提示已在 ApiClient 中显示
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(String(error));
+      }
+    }
   }
 
   /**
@@ -119,14 +131,36 @@ export class WorkService {
    * 删除作品
    */
   async deleteWork(workId: string): Promise<SuccessResponse> {
-    return this.apiClient.delete<SuccessResponse>(`/works/${workId}`);
+    try {
+      const response = await this.apiClient.delete<SuccessResponse>(`/works/${workId}`);
+      ToastUtil.showSuccess('作品删除成功');
+      return response;
+    } catch (error) {
+      // 错误提示已在 ApiClient 中显示
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(String(error));
+      }
+    }
   }
 
   /**
    * 批量删除作品
    */
   async batchDeleteWorks(workIds: string[]): Promise<SuccessResponse> {
-    return this.apiClient.post<SuccessResponse>('/works/batch-delete', { workIds });
+    try {
+      const response = await this.apiClient.post<SuccessResponse>('/works/batch-delete', { workIds });
+      ToastUtil.showSuccess(`已删除 ${workIds.length} 个作品`);
+      return response;
+    } catch (error) {
+      // 错误提示已在 ApiClient 中显示
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(String(error));
+      }
+    }
   }
 }
 

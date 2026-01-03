@@ -2,8 +2,10 @@ import router from '@ohos.router';
 import { UserService, UserInfo } from '../common/services/UserService';
 import { AuthService } from '../common/services/AuthService';
 import { WorkService } from '../common/services/WorkService';
+import { RouterService } from '../common/services/RouterService';
 import { promptAction } from '@kit.ArkUI';
 import { ScenarioItem, RecentWork } from '../common/types/CommonTypes';
+import { TabBar } from '../common/components/TabBar';
 
 @Entry
 @Component
@@ -48,8 +50,6 @@ struct Index {
     }
   ];
 
-  // 当前选中的底部导航
-  @State currentTab: number = 0;
   @State userInfo: UserInfo | null = null;
   // 最近作品列表
   @State recentWorks: RecentWork[] = [];
@@ -59,6 +59,7 @@ struct Index {
   private userService: UserService = UserService.getInstance();
   private authService: AuthService = AuthService.getInstance();
   private workService: WorkService = WorkService.getInstance();
+  private routerService: RouterService = RouterService.getInstance();
 
   aboutToAppear() {
     // 加载用户信息
@@ -101,17 +102,20 @@ struct Index {
     } catch (error) {
       console.error(`退出登录失败: ${error.message}`);
     } finally {
-      await this.userService.logout();
-      this.userInfo = null;
-      // 跳转到登录页
-      router.replaceUrl({ url: 'pages/Login' });
+    await this.userService.logout();
+    this.userInfo = null;
+    // 跳转到登录页
+      RouterService.getInstance().navigateTo('pages/Login', undefined, true)
+        .catch((err: Error) => {
+          console.error(`跳转失败: ${err.message}`);
+        });
     }
   }
 
   build() {
     Column() {
       // 顶部导航栏
-      Row() {
+        Row() {
         // Logo
         Text('Lumina')
           .fontSize(24)
@@ -133,7 +137,7 @@ struct Index {
           .width(40)
           .height(40)
           .backgroundColor('#F8F9FC')
-          .onClick(() => {
+              .onClick(() => {
             console.info('通知按钮点击');
           })
 
@@ -150,13 +154,14 @@ struct Index {
           .backgroundColor('#F8F9FC')
           .margin({ left: 8 })
           .onClick(() => {
-            router.pushUrl({ url: 'pages/Settings' }).catch((err: Error) => {
-              console.error(`跳转失败: ${err.message}`);
-            });
-          })
+            RouterService.getInstance().navigateTo('pages/Settings')
+              .catch((err: Error) => {
+                console.error(`跳转失败: ${err.message}`);
+              });
+              })
+          }
         }
-      }
-      .width('100%')
+        .width('100%')
       .height(56)
       .padding({ left: 16, right: 16 })
       .backgroundColor('#FFFFFF')
@@ -171,30 +176,30 @@ struct Index {
               .fontSize(28)
               .fontWeight(FontWeight.Medium)
               .fontColor('#1A1F36')
-              .margin({ bottom: 8 })
+        .margin({ bottom: 8 })
 
-            Text($r('app.string.scenario_question'))
-              .fontSize(16)
+        Text($r('app.string.scenario_question'))
+          .fontSize(16)
               .fontWeight(FontWeight.Regular)
-              .fontColor('#6B7280')
+          .fontColor('#6B7280')
           }
           .width('100%')
           .alignItems(HorizontalAlign.Start)
           .margin({ top: 20, bottom: 24 })
 
-          // 快速场景标题
-          Text($r('app.string.quick_scenarios'))
-            .fontSize(20)
+        // 快速场景标题
+        Text($r('app.string.quick_scenarios'))
+          .fontSize(20)
             .fontWeight(FontWeight.Medium)
             .fontColor('#1A1F36')
-            .margin({ bottom: 16 })
-            .width('100%')
+          .margin({ bottom: 16 })
+          .width('100%')
 
-          // 场景网格
-          Grid() {
-            ForEach(this.scenarios, (item: ScenarioItem) => {
-              GridItem() {
-                Column() {
+        // 场景网格
+        Grid() {
+          ForEach(this.scenarios, (item: ScenarioItem) => {
+            GridItem() {
+              Column() {
                   // 图标背景（渐变圆形，带渐变效果）
                   Stack() {
                     Circle({ width: 64, height: 64 })
@@ -207,7 +212,7 @@ struct Index {
                       .opacity(0.1)
 
                     // 图标
-                    Image(item.icon)
+                Image(item.icon)
                       .width(48)
                       .height(48)
                       .fillColor('#667eea')
@@ -216,20 +221,20 @@ struct Index {
                   .height(64)
                   .margin({ bottom: 12 })
 
-                  Text(item.title)
+                Text(item.title)
                     .fontSize(16)
-                    .fontWeight(FontWeight.Medium)
+                  .fontWeight(FontWeight.Medium)
                     .fontColor('#1A1F36')
-                    .margin({ bottom: 4 })
+                  .margin({ bottom: 4 })
 
-                  Text($r('app.string.one_click_generate'))
+                Text($r('app.string.one_click_generate'))
                     .fontSize(14)
-                    .fontColor('#6B7280')
-                }
-                .width('100%')
+                  .fontColor('#6B7280')
+              }
+              .width('100%')
                 .height(144)
-                .justifyContent(FlexAlign.Center)
-                .padding(16)
+              .justifyContent(FlexAlign.Center)
+              .padding(16)
                 .borderRadius(16)
                 .border({
                   width: this.selectedSceneId === item.id ? 2 : 2,
@@ -242,33 +247,40 @@ struct Index {
                   offsetX: 0,
                   offsetY: this.selectedSceneId === item.id ? 4 : 0
                 })
-                .onClick(() => {
+              .onClick(async () => {
                   // 切换选中状态
                   this.selectedSceneId = this.selectedSceneId === item.id ? null : item.id;
                   
-                  // 延迟跳转，让用户看到选中效果
-                  setTimeout(() => {
-                    router.pushUrl({
-                      url: item.route,
-                      params: {
-                        scenarioId: item.id,
-                        scenarioTitle: item.title
-                      }
-                    }).catch((err: Error) => {
-                      console.error(`跳转失败: ${err.message}`);
+                  // 将 string 类型的 route 转换为 Route 类型
+                  const targetRoute = item.route as 'pages/ScenarioDetail' | 'pages/BatchProcess';
+                  const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+                  params['scenarioId'] = item.id;
+                  params['scenarioTitle'] = item.title;
+                  
+                  try {
+                    console.info(`[Index] 准备跳转到: ${targetRoute}, scenarioId: ${item.id}, title: ${item.title}`);
+                    await RouterService.getInstance().navigateTo(targetRoute, params);
+                    console.info(`[Index] 跳转成功: ${targetRoute}`);
+                  } catch (err) {
+                    const errorMsg = err instanceof Error ? err.message : String(err);
+                    console.error(`[Index] 跳转失败: ${errorMsg}`);
+                    // 使用提示框显示错误，方便用户看到
+                    promptAction.showToast({
+                      message: `跳转失败: ${errorMsg}`,
+                      duration: 2000
                     });
-                  }, 150);
-                })
-              }
-            }, (item: ScenarioItem) => item.id)
-          }
-          .columnsTemplate('1fr 1fr')
-          .rowsTemplate('1fr 1fr 1fr')
-          .columnsGap(12)
-          .rowsGap(12)
-          .width('100%')
+                  }
+              })
+            }
+          }, (item: ScenarioItem) => item.id)
+        }
+        .columnsTemplate('1fr 1fr')
+        .rowsTemplate('1fr 1fr 1fr')
+        .columnsGap(12)
+        .rowsGap(12)
+        .width('100%')
           .height(456)
-          .margin({ bottom: 24 })
+        .margin({ bottom: 24 })
 
           // 最近作品区域
           if (this.recentWorks.length > 0) {
@@ -293,52 +305,66 @@ struct Index {
                     .fontColor('#667eea')
                     .margin({ left: 4 })
                 }
-                .onClick(() => {
-                  router.pushUrl({ url: 'pages/MyWorks' }).catch((err: Error) => {
-                    console.error(`跳转失败: ${err.message}`);
-                  });
+                .onClick(async () => {
+                  // 切换到Tab 2 (作品页)
+                  await RouterService.getInstance().switchTab(2)
+                    .catch((err: Error) => {
+                      console.error(`切换Tab失败: ${err.message}`);
+                    });
                 })
               }
               .width('100%')
               .margin({ bottom: 16 })
 
-              // 作品横向滚动
+              // 作品图片横向滚动（第一行）
               Scroll() {
                 Row() {
                   ForEach(this.recentWorks.slice(0, 5), (work: RecentWork) => {
-                    Column() {
-                      // 作品缩略图
-                      Image(work.thumbnail || $r('app.media.startIcon'))
-                        .width(143)
-                        .height(143)
-                        .borderRadius(12)
-                        .objectFit(ImageFit.Cover)
-                        .backgroundColor('#E5E7EB')
-                        .onClick(() => {
-                          // 跳转到作品详情
-                          router.pushUrl({
-                            url: 'pages/ProcessResult',
-                            params: {
-                              workId: work.id
-                            }
-                          }).catch((err: Error) => {
-                            console.error(`跳转失败: ${err.message}`);
-                          });
-                        })
-
-                      // 文件名
-                      Text(work.filename)
-                        .fontSize(12)
-                        .fontWeight(FontWeight.Regular)
-                        .fontColor('#6B7280')
-                        .maxLines(1)
-                        .textOverflow({ overflow: TextOverflow.Ellipsis })
-                        .width(143)
-                        .textAlign(TextAlign.Center)
-                        .margin({ top: 8 })
-                    }
-                    .margin({ right: 8 })
+                    Image(work.thumbnail || $r('app.media.startIcon'))
+                      .width(143)
+                      .height(143)
+                      .borderRadius(12)
+                      .objectFit(ImageFit.Cover)
+                      .backgroundColor('#E5E7EB')
+                      .margin({ right: 8 })
+                      .shadow({
+                        radius: 4,
+                        color: '#000000',
+                        offsetX: 0,
+                        offsetY: 2
+                      })
+                      .onClick(() => {
+                        // 跳转到作品详情
+                        const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+                        params['workId'] = work.id;
+                        RouterService.getInstance().navigateTo('pages/ProcessResult', params).catch((err: Error) => {
+                          console.error(`跳转失败: ${err.message}`);
+                        });
+                      })
                   }, (work: RecentWork) => work.id)
+                }
+                .padding({ left: 0, right: 0 })
+              }
+              .scrollable(ScrollDirection.Horizontal)
+              .scrollBar(BarState.Off)
+              .width('100%')
+              .margin({ left: -16, right: -16, bottom: 8 })
+              .padding({ left: 16, right: 16 })
+
+              // 文件名横向滚动（第二行）
+              Scroll() {
+                Row() {
+                  ForEach(this.recentWorks.slice(0, 5), (work: RecentWork) => {
+                    Text(work.filename)
+                      .fontSize(12)
+                      .fontWeight(FontWeight.Regular)
+                      .fontColor('#6B7280')
+                      .maxLines(1)
+                      .textOverflow({ overflow: TextOverflow.Ellipsis })
+                      .width(143)
+                      .textAlign(TextAlign.Center)
+                      .margin({ right: 8 })
+                  }, (work: RecentWork) => `name-${work.id}`)
                 }
                 .padding({ left: 0, right: 0 })
               }
@@ -353,7 +379,7 @@ struct Index {
           }
 
           // 升级专业版横幅
-          Row() {
+        Row() {
             // 左侧图标
             Stack() {
               Circle({ width: 32, height: 32 })
@@ -364,30 +390,30 @@ struct Index {
             .height(32)
             .margin({ right: 12 })
 
-            Image($r('app.media.startIcon'))
-              .width(24)
-              .height(24)
+          Image($r('app.media.startIcon'))
+            .width(24)
+            .height(24)
               .fillColor('#FFFFFF')
               .position({ x: 4, y: 4 })
 
             // 中间文字
-            Column() {
-              Text($r('app.string.upgrade_pro'))
-                .fontSize(16)
+          Column() {
+            Text($r('app.string.upgrade_pro'))
+              .fontSize(16)
                 .fontWeight(FontWeight.Medium)
-                .fontColor('#FFFFFF')
+              .fontColor('#FFFFFF')
                 .margin({ bottom: 2 })
 
-              Text($r('app.string.unlimited_use'))
+            Text($r('app.string.unlimited_use'))
                 .fontSize(14)
-                .fontColor('#FFFFFF')
-                .opacity(0.9)
-            }
-            .alignItems(HorizontalAlign.Start)
-            .layoutWeight(1)
+              .fontColor('#FFFFFF')
+              .opacity(0.9)
+          }
+          .alignItems(HorizontalAlign.Start)
+          .layoutWeight(1)
 
             // 右侧箭头
-            Image($r('app.media.startIcon'))
+          Image($r('app.media.startIcon'))
               .width(24)
               .height(24)
               .fillColor('#FFFFFF')
@@ -411,9 +437,10 @@ struct Index {
           })
           .onClick(() => {
             // 跳转到升级页面
-            router.pushUrl({ url: 'pages/MemberSubscription' }).catch((err: Error) => {
-              console.error(`跳转失败: ${err.message}`);
-            });
+            RouterService.getInstance().navigateTo('pages/MemberSubscription')
+              .catch((err: Error) => {
+                console.error(`跳转失败: ${err.message}`);
+              });
           })
         }
         .width('100%')
@@ -425,148 +452,7 @@ struct Index {
       .backgroundColor('#F8F9FC')
 
       // 底部导航栏
-      Row() {
-        // 首页
-        Column() {
-          // 激活指示点
-          if (this.currentTab === 0) {
-            Stack() {
-              Circle({ width: 4, height: 4 })
-                .fill('#667eea')
-            }
-            .width(4)
-            .height(4)
-            .margin({ bottom: 4 })
-          }
-
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
-            .fillColor(this.currentTab === 0 ? '#667eea' : '#6B7280')
-
-          Text($r('app.string.homepage'))
-            .fontSize(12)
-            .fontWeight(this.currentTab === 0 ? FontWeight.Medium : FontWeight.Regular)
-            .fontColor(this.currentTab === 0 ? '#667eea' : '#6B7280')
-            .margin({ top: 4 })
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .onClick(() => {
-          this.currentTab = 0;
-        })
-
-        // 场景
-        Column() {
-          // 激活指示点
-          if (this.currentTab === 1) {
-            Stack() {
-              Circle({ width: 4, height: 4 })
-                .fill('#667eea')
-            }
-            .width(4)
-            .height(4)
-            .margin({ bottom: 4 })
-          }
-
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
-            .fillColor(this.currentTab === 1 ? '#667eea' : '#6B7280')
-
-          Text($r('app.string.scenarios'))
-            .fontSize(12)
-            .fontWeight(this.currentTab === 1 ? FontWeight.Medium : FontWeight.Regular)
-            .fontColor(this.currentTab === 1 ? '#667eea' : '#6B7280')
-            .margin({ top: 4 })
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .onClick(() => {
-          this.currentTab = 1;
-          // 跳转到场景页面（后续实现）
-          console.info('跳转到场景页面');
-        })
-
-        // 作品
-        Column() {
-          // 激活指示点
-          if (this.currentTab === 2) {
-            Stack() {
-              Circle({ width: 4, height: 4 })
-                .fill('#667eea')
-            }
-            .width(4)
-            .height(4)
-            .margin({ bottom: 4 })
-          }
-
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
-            .fillColor(this.currentTab === 2 ? '#667eea' : '#6B7280')
-
-          Text($r('app.string.works'))
-            .fontSize(12)
-            .fontWeight(this.currentTab === 2 ? FontWeight.Medium : FontWeight.Regular)
-            .fontColor(this.currentTab === 2 ? '#667eea' : '#6B7280')
-            .margin({ top: 4 })
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .onClick(() => {
-          this.currentTab = 2;
-          // 跳转到作品页面
-          router.pushUrl({ url: 'pages/MyWorks' }).catch((err: Error) => {
-            console.error(`跳转失败: ${err.message}`);
-          });
-        })
-
-        // 我的
-        Column() {
-          // 激活指示点
-          if (this.currentTab === 3) {
-            Stack() {
-              Circle({ width: 4, height: 4 })
-                .fill('#667eea')
-            }
-            .width(4)
-            .height(4)
-            .margin({ bottom: 4 })
-          }
-
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
-            .fillColor(this.currentTab === 3 ? '#667eea' : '#6B7280')
-
-          Text($r('app.string.my'))
-            .fontSize(12)
-            .fontWeight(this.currentTab === 3 ? FontWeight.Medium : FontWeight.Regular)
-            .fontColor(this.currentTab === 3 ? '#667eea' : '#6B7280')
-            .margin({ top: 4 })
-        }
-        .layoutWeight(1)
-        .justifyContent(FlexAlign.Center)
-        .onClick(() => {
-          this.currentTab = 3;
-          // 跳转到我的页面
-          router.pushUrl({ url: 'pages/My' }).catch((err: Error) => {
-            console.error(`跳转失败: ${err.message}`);
-          });
-        })
-      }
-      .width('100%')
-      .height(56)
-      .padding({ top: 8, bottom: 8 })
-      .backgroundColor('#FFFFFF')
-      .border({ width: { top: 1 }, color: '#E5E7EB' })
-      .shadow({
-        radius: 2,
-        color: '#000000',
-        offsetX: 0,
-        offsetY: -1
-      })
+      TabBar()
     }
     .width('100%')
     .height('100%')

@@ -1,6 +1,8 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { picker } from '@kit.CoreFileKit';
 import { BatchBackgroundTemplate } from '../common/types/CommonTypes';
+import { TopNavBar } from '../common/components/TopNavBar';
 
 @Entry
 @Component
@@ -26,17 +28,20 @@ struct BatchProcess {
   private sizePresets: string[] = ['2000x2000', '1600x1600', '自定义'];
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
+  async handleBack() {
+    console.info('[BatchProcess] handleBack 被调用');
     try {
-      router.back();
-      console.info('router.back() 已调用');
+      await RouterService.getInstance().goBack();
     } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[BatchProcess] 返回失败: ${errorMsg}`);
       // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+      try {
+        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const navErrorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[BatchProcess] 跳转首页失败: ${navErrorMsg}`);
+      }
     }
   }
 
@@ -46,34 +51,38 @@ struct BatchProcess {
 
   build() {
     Column() {
-      // 顶部导航栏
+      // 顶部导航栏（带更多选项按钮）
       Row() {
-        // 返回按钮
-        Button() {
-          Text('<')
+        // 左侧：TopNavBar（需要调整，因为TopNavBar本身是完整的Row）
+        Row() {
+          // 返回按钮
+          Button() {
+            Text('<')
+              .fontSize(20)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#1A1F36')
+          }
+          .type(ButtonType.Normal)
+          .width(40)
+          .height(40)
+          .backgroundColor('#F8F9FC')
+          .borderRadius(8)
+          .onClick(async () => {
+            await this.handleBack();
+          })
+
+          // 标题
+          Text('批量处理')
             .fontSize(20)
             .fontWeight(FontWeight.Medium)
             .fontColor('#1A1F36')
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .margin({ left: -40 })
         }
-        .type(ButtonType.Normal)
-        .width(40)
-        .height(40)
-        .backgroundColor('#F8F9FC')
-        .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
-
-        // 标题
-        Text('批量处理')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#1A1F36')
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-
-        // 更多选项按钮
+        .layoutWeight(1)
+        
+        // 右侧：更多选项按钮
         Image($r('app.media.startIcon'))
           .width(24)
           .height(24)
@@ -86,6 +95,8 @@ struct BatchProcess {
       .width('100%')
       .height(56)
       .padding({ left: 20, right: 20 })
+      .justifyContent(FlexAlign.SpaceBetween)
+      .alignItems(VerticalAlign.Center)
       .backgroundColor('#FFFFFF')
       .border({ width: { bottom: 1 }, color: '#E5E7EB' })
 
@@ -210,17 +221,17 @@ struct BatchProcess {
 
                       // 删除按钮（仅在待处理状态显示）
                       if (this.imageStatuses.get(index) === 'pending' || !this.imageStatuses.has(index)) {
-                        Image($r('app.media.startIcon'))
-                          .width(20)
-                          .height(20)
-                          .fillColor('#FFFFFF')
-                          .backgroundColor('#EF4444')
-                          .borderRadius(10)
-                          .padding(4)
-                          .margin({ top: 4, right: 4 })
-                          .onClick(() => {
-                            this.removeImage(index);
-                          })
+                      Image($r('app.media.startIcon'))
+                        .width(20)
+                        .height(20)
+                        .fillColor('#FFFFFF')
+                        .backgroundColor('#EF4444')
+                        .borderRadius(10)
+                        .padding(4)
+                        .margin({ top: 4, right: 4 })
+                        .onClick(() => {
+                          this.removeImage(index);
+                        })
                       }
                     }
                     .margin({ right: 12 })
@@ -398,7 +409,7 @@ struct BatchProcess {
         .opacity(this.isProcessing ? 0.6 : 1)
         .onClick(() => {
           if (!this.isProcessing) {
-            this.startBatchProcessing();
+          this.startBatchProcessing();
           }
         })
         .margin({ left: 20, right: 20, bottom: 20 })
@@ -490,18 +501,15 @@ struct BatchProcess {
       await new Promise<void>(resolve => setTimeout(resolve, 2000));
 
       // 跳转到工作台页面
-      router.pushUrl({
-        url: 'pages/Workbench',
-        params: {
-          imagePaths: this.selectedImagePaths,
-          imageUris: this.selectedImageUris,
-          scenarioId: 'batch',
-          scenarioTitle: '批量处理',
-          isBatch: true,
-          backgroundTemplate: this.selectedBackgroundIndex,
-          sizePreset: this.selectedSizePreset
-        }
-      }).catch((err: Error) => {
+      const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+      params['imagePaths'] = this.selectedImagePaths;
+      params['imageUris'] = this.selectedImageUris;
+      params['scenarioId'] = 'batch';
+      params['scenarioTitle'] = '批量处理';
+      params['isBatch'] = true;
+      params['backgroundTemplate'] = this.selectedBackgroundIndex;
+      params['sizePreset'] = this.selectedSizePreset;
+      RouterService.getInstance().navigateTo('pages/Workbench', params).catch((err: Error) => {
         console.error(`跳转到工作台失败: ${err.message}`);
       });
     } catch (err) {

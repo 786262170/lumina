@@ -1,7 +1,9 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { UserService, UserInfo } from '../common/services/UserService';
 import { UserApiService } from '../common/services/UserApiService';
 import { AuthService } from '../common/services/AuthService';
+import { TabBar } from '../common/components/TabBar';
 
 @Entry
 @Component
@@ -70,18 +72,84 @@ struct My {
   }
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
-    try {
-      router.back();
-      console.info('router.back() 已调用');
-    } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
-      // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+  async handleBack() {
+    console.info('[My] handleBack 被调用');
+    const routerService = RouterService.getInstance();
+    const routeHistory = routerService.getRouteHistory();
+    
+    // 检查路由历史，判断是否应该返回到首页
+    // 如果是 Tab 页面（通过 replace 进入），历史栈可能只有当前页面
+    // 此时应该返回到首页
+    if (routeHistory.length <= 1) {
+      // 历史栈只有一页或为空，返回到首页
+      console.info('[My] 路由历史栈为空，返回到首页');
+      try {
+        await routerService.navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[My] 跳转首页失败: ${errorMsg}`);
+      }
+    } else {
+      // 尝试返回上一页
+      try {
+        await routerService.goBack();
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[My] 返回失败: ${errorMsg}`);
+        // 如果返回失败，则返回到首页
+        try {
+          await routerService.navigateTo('pages/Index', undefined, true);
+        } catch (error) {
+          const navErrorMsg = error instanceof Error ? error.message : String(error);
+          console.error(`[My] 跳转首页失败: ${navErrorMsg}`);
+        }
+      }
     }
+  }
+
+  // 构建菜单项
+  @Builder
+  buildMenuItem(title: string, iconName: string, showBadge: boolean, onClick: () => void) {
+    Row() {
+      // 左侧图标
+      Stack() {
+        Image($r('app.media.startIcon'))
+          .width(20)
+          .height(20)
+          .fillColor('#6B7280')
+
+        // 红点通知
+        if (showBadge) {
+          Stack() {
+            Circle({ width: 8, height: 8 })
+              .fill('#EF4444')
+          }
+          .width(8)
+          .height(8)
+          .position({ x: 12, y: -2 })
+        }
+      }
+      .width(24)
+      .height(24)
+      .margin({ right: 12 })
+
+      Text(title)
+        .fontSize(16)
+        .fontWeight(FontWeight.Regular)
+        .fontColor('#1A1F36')
+        .layoutWeight(1)
+
+      // 右侧箭头
+      Image($r('app.media.startIcon'))
+        .width(20)
+        .height(20)
+        .fillColor('#6B7280')
+    }
+    .width('100%')
+    .height(56)
+    .padding({ left: 20, right: 20 })
+    .alignItems(VerticalAlign.Center)
+    .onClick(onClick)
   }
 
   build() {
@@ -100,8 +168,9 @@ struct My {
         .height(40)
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
+        .onClick(async () => {
+          console.info('[My] 返回按钮被点击');
+          await this.handleBack();
         })
 
         // 标题
@@ -294,18 +363,21 @@ struct My {
           .margin({ bottom: 12 })
           .onClick(() => {
             // 跳转到升级页面
-            router.pushUrl({ url: 'pages/MemberSubscription' }).catch((err: Error) => {
-              console.error(`跳转失败: ${err.message}`);
-            });
+            RouterService.getInstance().navigateTo('pages/MemberSubscription')
+              .catch((err: Error) => {
+                console.error(`跳转失败: ${err.message}`);
+              });
           })
 
           // 菜单列表
           Column() {
             // 我的作品
-            this.buildMenuItem('我的作品', 'Image', false, () => {
-              router.pushUrl({ url: 'pages/MyWorks' }).catch((err: Error) => {
-                console.error(`跳转失败: ${err.message}`);
-              });
+            this.buildMenuItem('我的作品', 'Image', false, async () => {
+              // 切换到Tab 2 (作品页)
+              await RouterService.getInstance().switchTab(2)
+                .catch((err: Error) => {
+                  console.error(`切换Tab失败: ${err.message}`);
+                });
             })
 
             Divider()
@@ -343,9 +415,10 @@ struct My {
 
             // 设置
             this.buildMenuItem('设置', 'Settings', false, () => {
-              router.pushUrl({ url: 'pages/Settings' }).catch((err: Error) => {
-                console.error(`跳转失败: ${err.message}`);
-              });
+              RouterService.getInstance().navigateTo('pages/Settings')
+                .catch((err: Error) => {
+                  console.error(`跳转失败: ${err.message}`);
+                });
             })
 
             Divider()
@@ -374,55 +447,13 @@ struct My {
       .layoutWeight(1)
       .width('100%')
       .backgroundColor('#F9FAFB')
+
+      // 底部导航栏
+      TabBar()
     }
     .width('100%')
     .height('100%')
     .backgroundColor('#F8F9FC')
-  }
-
-  // 构建菜单项
-  @Builder
-  buildMenuItem(title: string, iconName: string, showBadge: boolean, onClick: () => void) {
-    Row() {
-      // 左侧图标
-      Stack() {
-        Image($r('app.media.startIcon'))
-          .width(20)
-          .height(20)
-          .fillColor('#6B7280')
-
-        // 红点通知
-        if (showBadge) {
-          Stack() {
-            Circle({ width: 8, height: 8 })
-              .fill('#EF4444')
-          }
-          .width(8)
-          .height(8)
-          .position({ x: 12, y: -2 })
-        }
-      }
-      .width(24)
-      .height(24)
-      .margin({ right: 12 })
-
-      Text(title)
-        .fontSize(16)
-        .fontWeight(FontWeight.Regular)
-        .fontColor('#1A1F36')
-        .layoutWeight(1)
-
-      // 右侧箭头
-      Image($r('app.media.startIcon'))
-        .width(20)
-        .height(20)
-        .fillColor('#6B7280')
-    }
-    .width('100%')
-    .height(56)
-    .padding({ left: 20, right: 20 })
-    .alignItems(VerticalAlign.Center)
-    .onClick(onClick)
   }
 }
 

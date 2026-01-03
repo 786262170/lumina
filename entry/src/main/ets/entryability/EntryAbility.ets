@@ -1,6 +1,7 @@
 import { AbilityConstant, ConfigurationConstant, UIAbility, Want } from '@kit.AbilityKit';
 import { hilog } from '@kit.PerformanceAnalysisKit';
 import { window } from '@kit.ArkUI';
+import { UserService } from '../common/services/UserService';
 
 const DOMAIN = 0x0000;
 
@@ -11,6 +12,11 @@ export default class EntryAbility extends UIAbility {
     } catch (err) {
       hilog.error(DOMAIN, 'testTag', 'Failed to set colorMode. Cause: %{public}s', JSON.stringify(err));
     }
+    
+    // 初始化UserService的context，以便后续能够访问Preferences存储
+    const userService = UserService.getInstance();
+    userService.setContext(this.context);
+    
     hilog.info(DOMAIN, 'testTag', '%{public}s', 'Ability onCreate');
   }
 

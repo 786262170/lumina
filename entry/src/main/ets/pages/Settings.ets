@@ -1,5 +1,7 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { UserService, UserInfo } from '../common/services/UserService';
+import { TopNavBar } from '../common/components/TopNavBar';
 
 @Entry
 @Component
@@ -41,26 +43,13 @@ struct Settings {
     this.storageProgress = total > 0 ? (used / total) * 100 : 0;
   }
 
-  // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
-    try {
-      router.back();
-      console.info('router.back() 已调用');
-    } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
-      // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
-    }
-  }
 
   // 退出登录
   async handleLogout() {
     await this.userService.logout();
     // 跳转到登录页面
-    router.replaceUrl({ url: 'pages/Login' }).catch((err: Error) => {
+    RouterService.getInstance().navigateTo('pages/Login', undefined, true)
+      .catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }
@@ -68,41 +57,7 @@ struct Settings {
   build() {
     Column() {
       // 顶部导航栏
-      Row() {
-        // 返回按钮
-        Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
-        }
-        .type(ButtonType.Normal)
-        .width(40)
-        .height(40)
-        .backgroundColor('#F8F9FC')
-        .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
-
-        // 标题
-        Text('设置')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#1A1F36')
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-
-        // 占位，保持标题居中
-        Blank()
-          .width(40)
-      }
-      .width('100%')
-      .height(56)
-      .padding({ left: 20, right: 20 })
-      .backgroundColor('#FFFFFF')
-      .border({ width: { bottom: 1 }, color: '#E5E7EB' })
+      TopNavBar({ title: '设置', showBack: true })
 
       Scroll() {
         Column() {
@@ -203,9 +158,9 @@ struct Settings {
             // 默认输出质量
             Row() {
               Column() {
-                Text('默认输出质量')
-                  .fontSize(16)
-                  .fontColor('#1F2937')
+              Text('默认输出质量')
+                .fontSize(16)
+                .fontColor('#1F2937')
                   .margin({ bottom: 2 })
 
                 Text('选择图片处理后的默认质量')
@@ -213,19 +168,19 @@ struct Settings {
                   .fontColor('#6B7280')
               }
               .alignItems(HorizontalAlign.Start)
-              .layoutWeight(1)
+                .layoutWeight(1)
 
               Row() {
-                Text(this.defaultQuality)
-                  .fontSize(14)
+              Text(this.defaultQuality)
+                .fontSize(14)
                   .fontColor('#667eea')
                   .fontWeight(FontWeight.Medium)
-                  .margin({ right: 8 })
+                .margin({ right: 8 })
 
-                Image($r('app.media.startIcon'))
-                  .width(20)
-                  .height(20)
-                  .fillColor('#9CA3AF')
+              Image($r('app.media.startIcon'))
+                .width(20)
+                .height(20)
+                .fillColor('#9CA3AF')
               }
               .alignItems(VerticalAlign.Center)
             }
@@ -272,7 +227,7 @@ struct Settings {
                   .onClick(() => {
                     this.defaultQuality = quality;
                     this.showQualityPicker = false;
-                  })
+            })
                 }, (quality: string) => quality)
               }
               .width('100%')
@@ -313,7 +268,7 @@ struct Settings {
 
             // 存储进度条
             Column() {
-              Row() {
+            Row() {
                 Text('已使用')
                   .fontSize(12)
                   .fontColor('#6B7280')

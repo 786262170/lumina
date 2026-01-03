@@ -1,4 +1,6 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
+import { TopNavBar } from '../common/components/TopNavBar';
 
 // 批量结果接口
 interface BatchResult {
@@ -31,17 +33,20 @@ struct ProcessResult {
   @State currentResultIndex: number = 0;
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
+  async handleBack() {
+    console.info('[ProcessResult] handleBack 被调用');
     try {
-      router.back();
-      console.info('router.back() 已调用');
+      await RouterService.getInstance().goBack();
     } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[ProcessResult] 返回失败: ${errorMsg}`);
       // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+      try {
+        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const navErrorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[ProcessResult] 跳转首页失败: ${navErrorMsg}`);
+      }
     }
   }
 
@@ -78,34 +83,38 @@ struct ProcessResult {
 
   build() {
     Column() {
-      // 顶部导航栏
+      // 顶部导航栏（带分享按钮）
       Row() {
-        // 返回按钮
-        Button() {
-          Text('<')
+        // 左侧：返回按钮和标题
+        Row() {
+          // 返回按钮
+          Button() {
+            Text('<')
+              .fontSize(20)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#1A1F36')
+          }
+          .type(ButtonType.Normal)
+          .width(40)
+          .height(40)
+          .backgroundColor('#F8F9FC')
+          .borderRadius(8)
+          .onClick(async () => {
+            await this.handleBack();
+          })
+
+          // 标题
+          Text('处理完成')
             .fontSize(20)
             .fontWeight(FontWeight.Medium)
             .fontColor('#1A1F36')
+            .layoutWeight(1)
+            .textAlign(TextAlign.Center)
+            .margin({ left: -40 })
         }
-        .type(ButtonType.Normal)
-        .width(40)
-        .height(40)
-        .backgroundColor('#F8F9FC')
-        .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
-
-        // 标题
-        Text('处理完成')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#1A1F36')
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-
-        // 分享按钮（向上箭头）
+        .layoutWeight(1)
+        
+        // 右侧：分享按钮
         Image($r('app.media.startIcon'))
           .width(24)
           .height(24)
@@ -117,6 +126,8 @@ struct ProcessResult {
       .width('100%')
       .height(56)
       .padding({ left: 20, right: 20 })
+      .justifyContent(FlexAlign.SpaceBetween)
+      .alignItems(VerticalAlign.Center)
       .backgroundColor('#FFFFFF')
       .border({ width: { bottom: 1 }, color: '#E5E7EB' })
 
@@ -136,19 +147,19 @@ struct ProcessResult {
           Row() {
             Button(this.isSliderMode ? '并排对比' : '滑动对比')
               .type(ButtonType.Normal)
-              .fontSize(14)
+            .fontSize(14)
               .fontColor('#667eea')
               .backgroundColor('#F8F9FC')
               .border({ width: 1, color: '#667eea' })
               .borderRadius(8)
               .width(100)
               .height(36)
-              .onClick(() => {
-                this.isSliderMode = !this.isSliderMode;
+            .onClick(() => {
+              this.isSliderMode = !this.isSliderMode;
                 if (!this.isSliderMode) {
                   this.sliderValue = 50; // 重置滑块位置
                 }
-              })
+            })
           }
           .width('100%')
           .margin({ top: 16, bottom: 24 })
@@ -502,16 +513,16 @@ struct ProcessResult {
   }
 
   // 重新处理
-  handleReprocess() {
+  async handleReprocess() {
     console.info('重新处理');
-    // 返回到场景详情页面，保留场景信息
-    router.replaceUrl({
-      url: 'pages/ScenarioDetail',
-      params: {
-        scenarioId: this.scenarioTitle,
-        scenarioTitle: this.scenarioTitle
-      }
-    }).catch((err: Error) => {
+    // 跳转到工作台页面，使用原始图片重新处理
+    const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+    params['imagePath'] = this.originalImagePath;
+    params['imageUri'] = this.originalImageUri;
+    params['scenarioId'] = this.scenarioTitle;
+    params['scenarioTitle'] = this.scenarioTitle;
+    params['isBatch'] = false;
+    await RouterService.getInstance().navigateTo('pages/Workbench', params).catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }
@@ -520,23 +531,20 @@ struct ProcessResult {
   handleAdjustEffect() {
     console.info('调整效果');
     // 跳转到工作台页面进行进一步编辑
-    router.pushUrl({
-      url: 'pages/Workbench',
-      params: {
-        imagePath: this.processedImagePath,
-        imageUri: this.processedImageUri,
-        scenarioId: this.scenarioTitle,
-        scenarioTitle: this.scenarioTitle,
-        isBatch: false
-      }
-    }).catch((err: Error) => {
+    const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+    params['imagePath'] = this.processedImagePath;
+    params['imageUri'] = this.processedImageUri;
+    params['scenarioId'] = this.scenarioTitle;
+    params['scenarioTitle'] = this.scenarioTitle;
+    params['isBatch'] = false;
+    RouterService.getInstance().navigateTo('pages/Workbench', params).catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }
 
-  // 保存到相册
+  // 保存到作品库
   async handleSaveToAlbum() {
-    console.info('保存到相册');
+    console.info('保存到作品库');
     try {
       // 获取图片URI
       const imageUri = this.processedImageUri || this.processedImagePath;
@@ -545,15 +553,24 @@ struct ProcessResult {
         return;
       }
       
-      // TODO: 实现保存图片到相册的功能
-      // 需要使用 @kit.MediaLibraryKit 中的相关API
-      // 示例代码（需要根据实际API调整）:
-      // const context = getContext(this) as Context;
-      // const phAccessHelper = photoAccessHelper.getPhotoAccessHelper(context);
-      // const photoAsset = await phAccessHelper.createAsset(photoType.IMAGE, 'processed_image.jpg', album);
-      // await phAccessHelper.addAssets([photoAsset]);
+      // TODO: 实现保存图片到作品库的功能
+      // 需要调用WorkService保存作品
+      // const workService = WorkService.getInstance();
+      // await workService.saveWork({
+      //   imagePath: this.processedImagePath,
+      //   imageUri: this.processedImageUri,
+      //   filename: this.fileName,
+      //   scenario: this.scenarioTitle
+      // });
       
-      console.info('图片已保存到相册');
+      console.info('图片已保存到作品库');
+      
+      // 保存成功后，切换到Tab 2 (作品页)
+      await RouterService.getInstance().switchTab(2)
+        .catch((err: Error) => {
+          console.error(`切换Tab失败: ${err.message}`);
+        });
+      
       // 可以显示成功提示（使用promptAction.showToast等）
     } catch (err) {
       console.error(`保存图片失败: ${JSON.stringify(err)}`);

@@ -1,5 +1,6 @@
 import { ApiClient } from './ApiClient';
 import { UserService, UserInfo } from './UserService';
+import { ToastUtil } from '../utils/ToastUtil';
 
 /**
  * 发送验证码请求
@@ -86,11 +87,26 @@ export class AuthService {
    * 发送验证码
    */
   async sendCode(phoneNumber: string): Promise<SendCodeResponse> {
-    return this.apiClient.post<SendCodeResponse>(
-      '/auth/send-code',
-      { phoneNumber },
-      false // 不需要认证
-    );
+    try {
+      const response = await this.apiClient.post<SendCodeResponse>(
+        '/auth/send-code',
+        { phoneNumber },
+        false, // 不需要认证
+        undefined, // headers
+        false, // 不显示成功提示（由调用方决定）
+        true,  // 显示错误提示
+        undefined, // successMessage
+        undefined // errorMessage
+      );
+      return response;
+    } catch (error) {
+      // 错误提示已在 ApiClient 中显示
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(String(error));
+      }
+    }
   }
 
   /**
@@ -173,10 +189,12 @@ export class AuthService {
       const response = await this.apiClient.post<SuccessResponse>('/auth/logout');
       // 清除本地用户信息
       await this.userService.logout();
+      ToastUtil.showSuccess('已退出登录');
       return response;
     } catch (error) {
       // 即使API调用失败，也清除本地信息
       await this.userService.logout();
+      ToastUtil.showSuccess('已退出登录');
       if (error instanceof Error) {
         throw error;
       } else {

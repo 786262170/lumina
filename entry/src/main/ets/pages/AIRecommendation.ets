@@ -1,5 +1,7 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { RecommendationItem } from '../common/types/CommonTypes';
+import { TopNavBar } from '../common/components/TopNavBar';
 
 // 推荐场景接口
 interface RecommendedScenario {
@@ -64,17 +66,20 @@ struct AIRecommendation {
   ];
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
+  async handleBack() {
+    console.info('[AIRecommendation] handleBack 被调用');
     try {
-      router.back();
-      console.info('router.back() 已调用');
+      await RouterService.getInstance().goBack();
     } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[AIRecommendation] 返回失败: ${errorMsg}`);
       // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+      try {
+        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const navErrorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[AIRecommendation] 跳转首页失败: ${navErrorMsg}`);
+      }
     }
   }
 
@@ -152,8 +157,9 @@ struct AIRecommendation {
             .backgroundColor('#FFFFFF')
             .opacity(0.2)
             .borderRadius(8)
-            .onClick(() => {
-              this.handleBack();
+            .onClick(async () => {
+              console.info('[AIRecommendation] 返回按钮被点击');
+              await this.handleBack();
             })
 
             Blank()
@@ -364,8 +370,8 @@ struct AIRecommendation {
                       .fontColor('#FFFFFF')
                       .fontWeight(FontWeight.Medium)
                   }
-                  .width(20)
-                  .height(20)
+                    .width(20)
+                    .height(20)
                 }
               }
               .width('100%')
@@ -422,8 +428,8 @@ struct AIRecommendation {
                       .fontWeight(FontWeight.Medium)
                       .fontColor('#667eea')
                     Text('匹配')
-                      .fontSize(12)
-                      .fontColor('#6B7280')
+                    .fontSize(12)
+                    .fontColor('#6B7280')
                   }
                   .justifyContent(FlexAlign.Center)
                 }
@@ -502,7 +508,10 @@ struct AIRecommendation {
             .border({ width: 1, color: '#E5E7EB' })
             .onClick(() => {
               // 返回首页
-              router.replaceUrl({ url: 'pages/Index' });
+              RouterService.getInstance().navigateTo('pages/Index', undefined, true)
+                .catch((err: Error) => {
+                  console.error(`跳转失败: ${err.message}`);
+                });
             })
           }
           .width('100%')

@@ -1,6 +1,8 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { TabItem, WorkItem } from '../common/types/CommonTypes';
 import { WorkService } from '../common/services/WorkService';
+import { TabBar } from '../common/components/TabBar';
 
 @Entry
 @Component
@@ -92,17 +94,43 @@ struct MyWorks {
   }
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
-    try {
-      router.back();
-      console.info('router.back() 已调用');
-    } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
-      // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+  async handleBack() {
+    console.info('[MyWorks] handleBack 被调用');
+    const routerService = RouterService.getInstance();
+    const routeHistory = routerService.getRouteHistory();
+    const currentRoute = routerService.getCurrentRoute();
+    
+    console.info(`[MyWorks] 当前路由: ${currentRoute}, 历史栈长度: ${routeHistory.length}, 历史栈: ${JSON.stringify(routeHistory)}`);
+    
+    // 检查路由历史，判断是否应该返回到首页
+    // Tab 页面通过 switchTab 进入时，历史栈应该至少有 Index
+    if (routeHistory.length <= 1) {
+      // 历史栈只有一页或为空，返回到首页
+      console.info('[MyWorks] 路由历史栈为空或只有一页，返回到首页');
+      await routerService.navigateTo('pages/Index', undefined, true)
+        .catch((error: Error) => {
+          console.error(`[MyWorks] 跳转首页失败: ${error.message}`);
+        });
+    } else if (routeHistory.length === 2 && routeHistory[0] === 'pages/Index') {
+      // 历史栈有两页，第一页是 Index，说明是通过 Tab 切换进入的
+      // 直接返回到 Index
+      console.info('[MyWorks] 通过 Tab 切换进入，返回到首页');
+      await routerService.navigateTo('pages/Index', undefined, true)
+        .catch((error: Error) => {
+          console.error(`[MyWorks] 跳转首页失败: ${error.message}`);
+        });
+    } else {
+      // 尝试返回上一页
+      console.info('[MyWorks] 尝试返回上一页');
+      await routerService.goBack()
+        .catch((err: Error) => {
+          console.error(`[MyWorks] 返回失败: ${err.message}`);
+          // 如果返回失败，则返回到首页
+          routerService.navigateTo('pages/Index', undefined, true)
+            .catch((error: Error) => {
+              console.error(`[MyWorks] 跳转首页失败: ${error.message}`);
+            });
+        });
     }
   }
 
@@ -122,14 +150,14 @@ struct MyWorks {
         .height(40)
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
-        .onClick(() => {
-          console.info('返回按钮被点击');
-          this.handleBack();
+        .onClick(async () => {
+          console.info('[MyWorks] 返回按钮被点击');
+          await this.handleBack();
         })
 
         // 标题
-        Text('我的作品')
-          .fontSize(20)
+      Text('我的作品')
+        .fontSize(20)
           .fontWeight(FontWeight.Medium)
           .fontColor('#1A1F36')
           .layoutWeight(1)
@@ -155,12 +183,12 @@ struct MyWorks {
           }
         })
       }
-      .width('100%')
+        .width('100%')
       .height(56)
       .padding({ left: 16, right: 16 })
       .justifyContent(FlexAlign.SpaceBetween)
       .alignItems(VerticalAlign.Center)
-      .backgroundColor('#FFFFFF')
+        .backgroundColor('#FFFFFF')
       .border({ width: { bottom: 1 }, color: '#E5E7EB' })
       
       // 导航标签栏
@@ -216,14 +244,14 @@ struct MyWorks {
             Circle({ width: 100, height: 100 })
               .fill('#F8F9FC')
 
-            Image($r('app.media.startIcon'))
+          Image($r('app.media.startIcon'))
               .width(60)
               .height(60)
               .fillColor('#C7C7CC')
           }
-          .width(100)
-          .height(100)
-          .margin({ bottom: 32 })
+            .width(100)
+            .height(100)
+            .margin({ bottom: 32 })
           
           // "还没有作品"文字
           Text('还没有作品')
@@ -245,8 +273,11 @@ struct MyWorks {
             .fontColor('#667eea')
             .decoration({ type: TextDecorationType.Underline })
             .onClick(() => {
-              // 跳转到首页
-              router.replaceUrl({ url: 'pages/Index' });
+              // 跳转到工作台
+              RouterService.getInstance().navigateTo('pages/Workbench')
+                .catch((err: Error) => {
+                  console.error(`跳转失败: ${err.message}`);
+                });
             })
         }
         .width('100%')
@@ -279,13 +310,10 @@ struct MyWorks {
                         }
                       } else {
                         // 普通模式：跳转到作品详情
-                        router.pushUrl({
-                          url: 'pages/ProcessResult',
-                          params: {
-                            workId: work.id,
-                            imagePath: work.thumbnail
-                          }
-                        }).catch((err: Error) => {
+                        const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+                        params['workId'] = work.id;
+                        params['imagePath'] = work.thumbnail;
+                        RouterService.getInstance().navigateTo('pages/ProcessResult', params).catch((err: Error) => {
                           console.error(`跳转失败: ${err.message}`);
                         });
                       }
@@ -320,8 +348,8 @@ struct MyWorks {
                     .height(24)
                     .position({ x: 8, y: 8 })
                   }
-                }
-                .width('100%')
+        }
+        .width('100%')
                 .aspectRatio(1)
               }
             }, (work: WorkItem) => work.id)
@@ -342,7 +370,7 @@ struct MyWorks {
             Text(`已选择 ${this.selectedWorkIds.length} 项`)
               .fontSize(14)
               .fontColor('#1A1F36')
-              .layoutWeight(1)
+        .layoutWeight(1)
 
             Button() {
               Text('分享')
@@ -387,6 +415,9 @@ struct MyWorks {
           })
         }
       }
+
+      // 底部导航栏
+      TabBar()
     }
     .width('100%')
     .height('100%')

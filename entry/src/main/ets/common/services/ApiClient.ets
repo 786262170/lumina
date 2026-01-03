@@ -1,16 +1,20 @@
 import http from '@ohos.net.http';
 import { UserService } from './UserService';
+import { ToastUtil } from '../utils/ToastUtil';
 
 /**
  * API 客户端配置
+ * 
+ * API 文档地址: http://8.140.227.147:8000/docs
  */
 export class ApiConfig {
-  // 开发环境
-  static readonly DEV_BASE_URL = 'http://localhost:8000/v1';
+  // 开发/测试环境 - 使用实际的API服务器地址
+  static readonly DEV_BASE_URL = 'http://8.140.227.147:8000/v1';
+  
   // 生产环境（根据实际配置修改）
   static readonly PROD_BASE_URL = 'https://api.lumina.ai/v1';
   
-  // 当前使用的Base URL（可通过环境变量切换）
+  // 当前使用的Base URL
   static readonly BASE_URL = ApiConfig.DEV_BASE_URL;
   
   static readonly TIMEOUT = 30000; // 30秒超时
@@ -49,6 +53,10 @@ export interface RequestOptions {
   needAuth?: boolean;
   headers?: Record<string, string>;
   timeout?: number;
+  showSuccessToast?: boolean; // 是否显示成功提示
+  showErrorToast?: boolean; // 是否显示失败提示
+  successMessage?: string; // 自定义成功提示信息
+  errorMessage?: string; // 自定义失败提示信息
 }
 
 /**
@@ -78,6 +86,10 @@ export class ApiClient {
     const needAuth = options.needAuth !== undefined ? options.needAuth : true;
     const customHeaders = options.headers;
     const timeout = options.timeout !== undefined ? options.timeout : ApiConfig.TIMEOUT;
+    const showSuccessToast = options.showSuccessToast !== undefined ? options.showSuccessToast : false;
+    const showErrorToast = options.showErrorToast !== undefined ? options.showErrorToast : true;
+    const successMessage = options.successMessage;
+    const errorMessage = options.errorMessage;
 
     const httpRequest = http.createHttp();
     const url = `${ApiConfig.BASE_URL}${path}`;
@@ -146,8 +158,21 @@ export class ApiClient {
         const errorField: ESObject | undefined = parsedData['error'] as ESObject | undefined;
         if (errorField) {
           const errorObj = errorField as ErrorDetail;
-          throw new Error(errorObj.message || '请求失败');
+          const errorMsg = errorObj.message || '请求失败';
+          console.error(`[ApiClient] API返回错误: ${errorMsg}`);
+          if (showErrorToast) {
+            ToastUtil.showError(errorMessage || errorMsg);
+          }
+          throw new Error(errorMsg);
         }
+        
+        // 显示成功提示（如果启用）
+        if (showSuccessToast && successMessage) {
+          console.info(`[ApiClient] 显示成功提示: ${successMessage}`);
+          ToastUtil.showSuccess(successMessage);
+        }
+        
+        console.info(`[ApiClient] 请求成功: ${method} ${path}`);
         
         // 如果响应有data字段，返回data，否则返回整个响应
         const dataField: ESObject | undefined = parsedData['data'] as ESObject | undefined;
@@ -160,30 +185,69 @@ export class ApiClient {
       } else if (responseCode === 401) {
         // 未认证，清除token
         await this.userService.logout();
-        throw new Error('登录已过期，请重新登录');
+        const errorMsg = '登录已过期，请重新登录';
+        console.error(`[ApiClient] HTTP ${responseCode}: ${errorMsg}`);
+        if (showErrorToast) {
+          ToastUtil.showError(errorMessage || errorMsg);
+        }
+        throw new Error(errorMsg);
       } else if (responseCode === 403) {
-        throw new Error('权限不足');
+        const errorMsg = '权限不足';
+        console.error(`[ApiClient] HTTP ${responseCode}: ${errorMsg}`);
+        if (showErrorToast) {
+          ToastUtil.showError(errorMessage || errorMsg);
+        }
+        throw new Error(errorMsg);
       } else if (responseCode === 404) {
-        throw new Error('资源不存在');
+        const errorMsg = '资源不存在';
+        console.error(`[ApiClient] HTTP ${responseCode}: ${errorMsg}`);
+        if (showErrorToast) {
+          ToastUtil.showError(errorMessage || errorMsg);
+        }
+        throw new Error(errorMsg);
       } else if (responseCode === 429) {
-        throw new Error('请求过于频繁，请稍后再试');
+        const errorMsg = '请求过于频繁，请稍后再试';
+        console.error(`[ApiClient] HTTP ${responseCode}: ${errorMsg}`);
+        if (showErrorToast) {
+          ToastUtil.showError(errorMessage || errorMsg);
+        }
+        throw new Error(errorMsg);
       } else {
         // 其他错误
         const errorField: ESObject | undefined = parsedData['error'] as ESObject | undefined;
-        let errorMessage = `请求失败 (${responseCode})`;
+        let errorMsg = `请求失败 (${responseCode})`;
         if (errorField) {
           const errorObj = errorField as ErrorDetail;
-          errorMessage = errorObj.message || errorMessage;
+          errorMsg = errorObj.message || errorMsg;
         }
-        throw new Error(errorMessage);
+        console.error(`[ApiClient] HTTP ${responseCode}: ${errorMsg}`);
+        if (showErrorToast) {
+          ToastUtil.showError(errorMessage || errorMsg);
+        }
+        throw new Error(errorMsg);
       }
     } catch (error) {
       if (error instanceof Error) {
-        console.error(`[ApiClient] 请求失败: ${error.message}`);
+        console.error(`[ApiClient] 请求异常: ${error.message}`);
+        // 如果错误还没有显示过提示，则显示
+        if (showErrorToast) {
+          // 检查错误消息，避免重复显示
+          const shouldShow = !error.message.includes('请求失败') && 
+                            !error.message.includes('登录已过期') &&
+                            !error.message.includes('权限不足') &&
+                            !error.message.includes('资源不存在') &&
+                            !error.message.includes('请求过于频繁');
+          if (shouldShow) {
+            ToastUtil.showError(errorMessage || error.message);
+          }
+        }
         throw error;
       } else {
         const errorMsg = `请求失败: ${String(error)}`;
-        console.error(`[ApiClient] ${errorMsg}`);
+        console.error(`[ApiClient] 未知错误: ${errorMsg}`);
+        if (showErrorToast) {
+          ToastUtil.showError(errorMessage || errorMsg);
+        }
         throw new Error(errorMsg);
       }
     } finally {
@@ -194,50 +258,100 @@ export class ApiClient {
   /**
    * GET 请求
    */
-  async get<T>(path: string, needAuth: boolean = true, headers?: Record<string, string>): Promise<T> {
+  async get<T>(
+    path: string,
+    needAuth: boolean = true,
+    headers?: Record<string, string>,
+    showSuccessToast: boolean = false,
+    showErrorToast: boolean = true,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T> {
     return this.request<T>({
       method: 'GET',
       path: path,
       needAuth: needAuth,
-      headers: headers
+      headers: headers,
+      showSuccessToast: showSuccessToast,
+      showErrorToast: showErrorToast,
+      successMessage: successMessage,
+      errorMessage: errorMessage
     });
   }
 
   /**
    * POST 请求
    */
-  async post<T>(path: string, data?: ESObject, needAuth: boolean = true, headers?: Record<string, string>): Promise<T> {
+  async post<T>(
+    path: string,
+    data?: ESObject,
+    needAuth: boolean = true,
+    headers?: Record<string, string>,
+    showSuccessToast: boolean = false,
+    showErrorToast: boolean = true,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T> {
     return this.request<T>({
       method: 'POST',
       path: path,
       data: data,
       needAuth: needAuth,
-      headers: headers
+      headers: headers,
+      showSuccessToast: showSuccessToast,
+      showErrorToast: showErrorToast,
+      successMessage: successMessage,
+      errorMessage: errorMessage
     });
   }
 
   /**
    * PUT 请求
    */
-  async put<T>(path: string, data?: ESObject, needAuth: boolean = true, headers?: Record<string, string>): Promise<T> {
+  async put<T>(
+    path: string,
+    data?: ESObject,
+    needAuth: boolean = true,
+    headers?: Record<string, string>,
+    showSuccessToast: boolean = false,
+    showErrorToast: boolean = true,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T> {
     return this.request<T>({
       method: 'PUT',
       path: path,
       data: data,
       needAuth: needAuth,
-      headers: headers
+      headers: headers,
+      showSuccessToast: showSuccessToast,
+      showErrorToast: showErrorToast,
+      successMessage: successMessage,
+      errorMessage: errorMessage
     });
   }
 
   /**
    * DELETE 请求
    */
-  async delete<T>(path: string, needAuth: boolean = true, headers?: Record<string, string>): Promise<T> {
+  async delete<T>(
+    path: string,
+    needAuth: boolean = true,
+    headers?: Record<string, string>,
+    showSuccessToast: boolean = false,
+    showErrorToast: boolean = true,
+    successMessage?: string,
+    errorMessage?: string
+  ): Promise<T> {
     return this.request<T>({
       method: 'DELETE',
       path: path,
       needAuth: needAuth,
-      headers: headers
+      headers: headers,
+      showSuccessToast: showSuccessToast,
+      showErrorToast: showErrorToast,
+      successMessage: successMessage,
+      errorMessage: errorMessage
     });
   }
 }

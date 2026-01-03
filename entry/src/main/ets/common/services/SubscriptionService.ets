@@ -61,7 +61,7 @@ export interface CurrentSubscriptionResponse {
  */
 export interface CreateOrderRequest {
   planId: PlanId;
-  paymentMethod: PaymentMethod;
+  paymentMethod?: PaymentMethod; // 可选，默认为wechat
 }
 
 /**

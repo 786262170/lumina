@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 
 @Entry
 @Component
@@ -400,12 +401,10 @@ struct Welcome {
         })
         .onClick(() => {
           // 跳转到AI问卷页
-          router.replaceUrl({
-            url: 'pages/AIQuestionnaire',
-            params: {}
-          }).catch((err: Error) => {
-            console.error(`跳转失败: ${err.message}`);
-          });
+          RouterService.getInstance().navigateTo('pages/AIQuestionnaire', undefined, true)
+            .catch((err: Error) => {
+              console.error(`跳转失败: ${err.message}`);
+            });
         })
         .margin({ top: 24, bottom: 40, left: 24, right: 24 })
       }

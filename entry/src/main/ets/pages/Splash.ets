@@ -1,21 +1,48 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
+import { UserService } from '../common/services/UserService';
 
 @Entry
 @Component
 struct Splash {
   private settings: RenderingContextSettings = new RenderingContextSettings(true);
   private context: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.settings);
+  private userService: UserService = UserService.getInstance();
+  private routerService: RouterService = RouterService.getInstance();
 
   aboutToAppear() {
-    // 延迟2秒后跳转到欢迎页
+    // 延迟2秒后检查登录状态并跳转
     setTimeout(() => {
-      router.replaceUrl({
-        url: 'pages/Welcome',
-        params: {}
-      }).catch((err: Error) => {
-        console.error(`跳转失败: ${err.message}`);
-      });
+      this.checkLoginAndNavigate();
     }, 2000);
+  }
+
+  // 检查登录状态并导航
+  async checkLoginAndNavigate() {
+    try {
+      // 初始化 Preferences（如果还未初始化）
+      await this.userService.initPreferences();
+      
+      // 检查是否已登录
+      const isLoggedIn = await this.userService.isLoggedIn();
+      
+      if (isLoggedIn) {
+        // 已登录，跳转到首页
+        console.info('[Splash] 用户已登录，跳转到首页');
+        await this.routerService.navigateTo('pages/Index', undefined, true);
+      } else {
+        // 未登录，跳转到登录页
+        console.info('[Splash] 用户未登录，跳转到登录页');
+        await this.routerService.navigateTo('pages/Login', undefined, true);
+      }
+    } catch (err) {
+      // 如果检查失败，默认跳转到登录页
+      console.error(`[Splash] 检查登录状态失败: ${err instanceof Error ? err.message : String(err)}`);
+      await this.routerService.navigateTo('pages/Login', undefined, true)
+        .catch((navErr: Error) => {
+          console.error(`跳转失败: ${navErr.message}`);
+        });
+    }
   }
 
   build() {
@@ -86,7 +113,7 @@ struct Splash {
         }
         .width(32)
         .height(32)
-        .margin({ bottom: 80 })
+          .margin({ bottom: 80 })
         .transition(TransitionEffect.OPACITY.animation({ duration: 800, curve: Curve.EaseOut }))
         .animation({
           iterations: -1,
@@ -145,14 +172,14 @@ struct Splash {
     this.drawRay(centerX, centerY, -Math.PI / 2, 20, 6); // 左
     
     this.context.globalAlpha = 1.0;
-    
+
     // 绘制中心圆圈（三层）
     // 外层圆圈
     this.context.beginPath();
     this.context.arc(centerX, centerY, 14, 0, 2 * Math.PI);
     this.context.fillStyle = '#FFFFFF';
     this.context.fill();
-    
+
     // 中层圆圈（半透明）
     this.context.beginPath();
     this.context.arc(centerX, centerY, 10, 0, 2 * Math.PI);
@@ -172,11 +199,11 @@ struct Splash {
     const startY = centerY + startRadius * Math.sin(angle);
     const endX = centerX + (startRadius + length) * Math.cos(angle);
     const endY = centerY + (startRadius + length) * Math.sin(angle);
-    
-    this.context.beginPath();
-    this.context.moveTo(startX, startY);
-    this.context.lineTo(endX, endY);
-    this.context.stroke();
+
+      this.context.beginPath();
+      this.context.moveTo(startX, startY);
+      this.context.lineTo(endX, endY);
+      this.context.stroke();
   }
 }
 

@@ -33,16 +33,36 @@ export class UserService {
     this.context = context;
   }
 
+  // 获取Context
+  getContext(): Context | null {
+    return this.context;
+  }
+
   // 初始化Preferences
   async initPreferences(): Promise<void> {
     if (!this.context) {
-      console.error('[UserService] Context未设置，无法初始化Preferences');
+      console.warn('[UserService] Context未设置，无法初始化Preferences（预览模式下可能正常）');
       return;
     }
     try {
       this.dataPreferences = await preferences.getPreferences(this.context, this.PREF_KEY);
+      console.info('[UserService] Preferences初始化成功');
     } catch (err) {
-      console.error(`[UserService] 初始化Preferences失败: ${JSON.stringify(err)}`);
+      // 在预览模式下，Preferences可能不可用，这是正常的
+      let errorCode: number | undefined = undefined;
+      if (err && typeof err === 'object') {
+        const errorObj: ESObject = err as ESObject;
+        const codeValue: ESObject | undefined = errorObj['code'] as ESObject | undefined;
+        if (codeValue !== undefined && typeof codeValue === 'number') {
+          errorCode = codeValue as number;
+        }
+      }
+      if (errorCode === 27656204) {
+        console.warn('[UserService] Preferences在预览模式下不可用（这是正常的）');
+      } else {
+        const errorStr = err instanceof Error ? err.message : String(err);
+        console.error(`[UserService] 初始化Preferences失败: ${errorStr}`);
+      }
     }
   }
 

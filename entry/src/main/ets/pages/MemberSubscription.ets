@@ -1,5 +1,7 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { PrivilegeItem, SubscriptionPlan } from '../common/types/CommonTypes';
+import { TopNavBar } from '../common/components/TopNavBar';
 
 @Entry
 @Component
@@ -7,20 +9,6 @@ struct MemberSubscription {
   @State isAgreed: boolean = false; // 是否同意订阅协议
   @State selectedPlan: string = 'annual'; // 选中的套餐：'monthly' 或 'annual'
 
-  // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
-    try {
-      router.back();
-      console.info('router.back() 已调用');
-    } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
-      // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
-    }
-  }
 
   // 会员特权列表
   private privileges: PrivilegeItem[] = [
@@ -54,37 +42,7 @@ struct MemberSubscription {
   build() {
     Column() {
       // 顶部导航栏
-      Row() {
-        // 返回按钮
-        Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
-        }
-        .type(ButtonType.Normal)
-        .width(40)
-        .height(40)
-        .backgroundColor('#F8F9FC')
-        .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
-
-        // 标题
-        Text('会员订阅')
-          .fontSize(20)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#1A1F36')
-          .layoutWeight(1)
-          .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-      }
-      .width('100%')
-      .height(56)
-      .padding({ left: 20, right: 20 })
-      .backgroundColor('#FFFFFF')
-      .border({ width: { bottom: 1 }, color: '#E5E7EB' })
+      TopNavBar({ title: '会员订阅', showBack: true })
 
       // 内容区域
       Scroll() {
@@ -439,10 +397,6 @@ struct MemberSubscription {
     // promptAction.showToast({
     //   message: '订阅成功',
     //   duration: 2000
-    // });
-    // setTimeout(() => {
-    //   router.back();
-    // }, 2000);
   }
 }
 

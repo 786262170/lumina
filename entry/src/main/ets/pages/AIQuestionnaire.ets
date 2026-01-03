@@ -1,4 +1,5 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
 import { ProductOption, Question } from '../common/types/CommonTypes';
 
 @Entry
@@ -57,17 +58,20 @@ struct AIQuestionnaire {
   private iconContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.iconSettings);
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
+  async handleBack() {
+    console.info('[AIQuestionnaire] handleBack 被调用');
     try {
-      router.back();
-      console.info('router.back() 已调用');
+      await RouterService.getInstance().goBack();
     } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[AIQuestionnaire] 返回失败: ${errorMsg}`);
       // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+      try {
+        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const navErrorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[AIQuestionnaire] 跳转首页失败: ${navErrorMsg}`);
+      }
     }
   }
 
@@ -87,9 +91,10 @@ struct AIQuestionnaire {
         .height(40)
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
+          .onClick(async () => {
+            console.info('[AIQuestionnaire] 返回按钮被点击');
+            await this.handleBack();
+          })
 
         Blank()
 
@@ -215,8 +220,8 @@ struct AIQuestionnaire {
                       .fontColor('#FFFFFF')
                       .fontWeight(FontWeight.Medium)
                   }
-                  .width(20)
-                  .height(20)
+                    .width(20)
+                    .height(20)
                 }
               }
               .width('100%')
@@ -532,8 +537,8 @@ struct AIQuestionnaire {
         duration: 200,
         curve: Curve.EaseInOut
       }, () => {
-        this.currentQuestion++;
-        this.selectedOptionId = '';
+      this.currentQuestion++;
+      this.selectedOptionId = '';
       });
       
       // 淡入动画
@@ -545,10 +550,8 @@ struct AIQuestionnaire {
       });
     } else {
       // 完成问卷，跳转到AI推荐页
-      router.replaceUrl({
-        url: 'pages/AIRecommendation',
-        params: {}
-      }).catch((err: Error) => {
+      RouterService.getInstance().navigateTo('pages/AIRecommendation', undefined, true)
+        .catch((err: Error) => {
         console.error(`跳转失败: ${err.message}`);
       });
     }
@@ -556,10 +559,8 @@ struct AIQuestionnaire {
 
   // 跳过到主页
   private skipToIndex() {
-    router.replaceUrl({
-      url: 'pages/Index',
-      params: {}
-    }).catch((err: Error) => {
+    RouterService.getInstance().navigateTo('pages/Index', undefined, true)
+      .catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }

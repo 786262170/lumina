@@ -1,4 +1,5 @@
 import { ApiClient } from './ApiClient';
+import { ToastUtil } from '../utils/ToastUtil';
 
 /**
  * 用户信息
@@ -61,7 +62,18 @@ export class UserApiService {
    * 更新用户信息
    */
   async updateUserProfile(request: UpdateUserProfileRequest): Promise<UserProfile> {
-    return this.apiClient.put<UserProfile>('/user/profile', request);
+    try {
+      const profile = await this.apiClient.put<UserProfile>('/user/profile', request);
+      ToastUtil.showSuccess('用户信息更新成功');
+      return profile;
+    } catch (error) {
+      // 错误提示已在 ApiClient 中显示
+      if (error instanceof Error) {
+        throw error;
+      } else {
+        throw new Error(String(error));
+      }
+    }
   }
 
   /**

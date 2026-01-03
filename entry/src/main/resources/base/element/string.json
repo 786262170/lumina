@@ -135,6 +135,14 @@
     {
       "name": "processing_tips",
       "value": "处理说明"
+    },
+    {
+      "name": "internet_permission_reason",
+      "value": "用于访问后端API服务"
+    },
+    {
+      "name": "read_imagevideo_permission_reason",
+      "value": "需要读取媒体库中的图片文件"
     }
   ]
 }

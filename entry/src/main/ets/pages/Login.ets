@@ -1,6 +1,7 @@
 import { router } from '@kit.ArkUI';
 import { AuthService } from '../common/services/AuthService';
 import { UserService } from '../common/services/UserService';
+import { RouterService } from '../common/services/RouterService';
 
 @Entry
 @Component
@@ -19,6 +20,7 @@ struct Login {
 
   private authService: AuthService = AuthService.getInstance();
   private userService: UserService = UserService.getInstance();
+  private routerService: RouterService = RouterService.getInstance();
   private timer: number | null = null;
 
   aboutToAppear() {
@@ -37,7 +39,7 @@ struct Login {
     const isLoggedIn = await this.userService.isLoggedIn();
     if (isLoggedIn) {
       // 已登录，直接跳转到主页
-      router.replaceUrl({ url: 'pages/Index' });
+      await this.routerService.navigateTo('pages/Index', undefined, true);
     }
   }
 
@@ -114,10 +116,8 @@ struct Login {
     } catch (error) {
       this.isCodeButtonDisabled = false;
       this.countdown = 0;
-      this.errorMessage = '获取验证码失败';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 2000);
+      // 错误提示已在 ApiClient 中显示，这里只更新UI状态
+      // this.errorMessage = '获取验证码失败';
     }
   }
 
@@ -135,8 +135,8 @@ struct Login {
     this.errorMessage = '';
     try {
       const result = await this.authService.guestMode();
-      // 登录成功，跳转到主页
-      router.replaceUrl({ url: 'pages/Index' });
+      // 登录成功，根据是否新用户决定跳转
+      await this.handleLoginSuccess(result.isNewUser);
     } catch (error) {
       this.errorMessage = error.message || '登录失败，请重试';
       setTimeout(() => {
@@ -162,13 +162,10 @@ struct Login {
     this.errorMessage = '';
     try {
       const result = await this.authService.login(this.phoneNumber, this.verificationCode);
-      // 登录成功，跳转到主页
-      router.replaceUrl({ url: 'pages/Index' });
+      // 登录成功，根据是否新用户决定跳转
+      await this.handleLoginSuccess(result.isNewUser);
     } catch (error) {
-      this.errorMessage = error.message || '登录失败，请重试';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      // 错误提示已在 ApiClient 中显示，这里只更新UI状态
     } finally {
       this.isLoading = false;
     }
@@ -185,15 +182,24 @@ struct Login {
       const wechatCode = 'mock_wechat_code'; // 实际应该从微信SDK获取
       
       const result = await this.authService.wechatLogin(wechatCode);
-      // 登录成功，跳转到主页
-      router.replaceUrl({ url: 'pages/Index' });
+      // 微信登录通常不是新用户，直接跳转到主页
+      await this.handleLoginSuccess(false);
     } catch (error) {
-      this.errorMessage = error.message || '微信登录失败，请重试';
-      setTimeout(() => {
-        this.errorMessage = '';
-      }, 3000);
+      // 错误提示已在 ApiClient 中显示，这里只更新UI状态
+      // this.errorMessage = error.message || '微信登录失败，请重试';
     } finally {
       this.isLoading = false;
+    }
+  }
+
+  // 处理登录成功后的路由跳转
+  async handleLoginSuccess(isNewUser: boolean) {
+    if (isNewUser) {
+      // 新用户：跳转到AI问卷页
+      await this.routerService.navigateTo('pages/AIQuestionnaire', undefined, true);
+    } else {
+      // 老用户：直接跳转到主页
+      await this.routerService.navigateTo('pages/Index', undefined, true);
     }
   }
 
@@ -485,7 +491,7 @@ struct Login {
           .fontColor('#3B82F6')
           .onClick(() => {
             // 游客模式
-            router.replaceUrl({ url: 'pages/Index' });
+            this.quickLogin();
           })
       }
       .justifyContent(FlexAlign.Center)

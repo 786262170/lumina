@@ -1,4 +1,6 @@
 import router from '@ohos.router';
+import { RouterService } from '../common/services/RouterService';
+import { TabBar } from '../common/components/TabBar';
 
 // 背景模板数据类型
 interface BackgroundTemplate {
@@ -59,6 +61,11 @@ struct BackgroundTemplates {
 
   // 获取过滤后的模板列表
   get filteredTemplates(): BackgroundTemplate[] {
+    // 确保 allTemplates 已初始化
+    if (!this.allTemplates || this.allTemplates.length === 0) {
+      return [];
+    }
+    
     let templates = this.allTemplates;
     
     // 按分类过滤
@@ -67,49 +74,63 @@ struct BackgroundTemplates {
     }
     
     // 按搜索关键词过滤
-    if (this.searchKeyword.trim()) {
+    if (this.searchKeyword && this.searchKeyword.trim()) {
       const keyword = this.searchKeyword.toLowerCase();
       templates = templates.filter(t => 
         t.title.toLowerCase().includes(keyword)
       );
     }
     
-    return templates;
+    return templates || [];
   }
 
   // 处理模板点击
   handleTemplateClick(template: BackgroundTemplate) {
     // 跳转到模板详情/选择页面
-    router.pushUrl({
-      url: 'pages/BackgroundTemplateDetail',
-      params: {
-        templateId: template.id,
-        templateTitle: template.title,
-        templateCategory: template.category,
-        templateRating: template.rating,
-        returnUrl: 'pages/BackgroundTemplates' // 标记返回页面
-      }
-    }).then(() => {
-      // 页面返回后，检查是否有选择结果
-      // 注意：在HarmonyOS中，返回数据需要通过其他方式传递
-      // 这里我们使用一个简单的方法：在返回时通过路由参数传递
-    }).catch((err: Error) => {
+    const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+    params['templateId'] = template.id;
+    params['templateTitle'] = template.title;
+    params['templateCategory'] = template.category;
+    params['templateRating'] = template.rating;
+    params['returnUrl'] = 'pages/BackgroundTemplates'; // 标记返回页面
+    RouterService.getInstance().navigateTo('pages/BackgroundTemplateDetail', params).catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }
 
   // 返回上一页
-  handleBack() {
-    console.info('handleBack 被调用');
-    try {
-      router.back();
-      console.info('router.back() 已调用');
-    } catch (err) {
-      console.error(`router.back() 调用失败: ${JSON.stringify(err)}`);
-      // 如果无法返回，则返回到首页
-      router.replaceUrl({ url: 'pages/Index' }).catch((error: Error) => {
-        console.error(`跳转首页失败: ${error.message}`);
-      });
+  async handleBack() {
+    console.info('[BackgroundTemplates] handleBack 被调用');
+    const routerService = RouterService.getInstance();
+    const routeHistory = routerService.getRouteHistory();
+    
+    // 检查路由历史，判断是否应该返回到首页
+    // 如果是 Tab 页面（通过 replace 进入），历史栈可能只有当前页面
+    // 此时应该返回到首页
+    if (routeHistory.length <= 1) {
+      // 历史栈只有一页或为空，返回到首页
+      console.info('[BackgroundTemplates] 路由历史栈为空，返回到首页');
+      try {
+        await routerService.navigateTo('pages/Index', undefined, true);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[BackgroundTemplates] 跳转首页失败: ${errorMsg}`);
+      }
+    } else {
+      // 尝试返回上一页
+      try {
+        await routerService.goBack();
+      } catch (err) {
+        const errorMsg = err instanceof Error ? err.message : String(err);
+        console.error(`[BackgroundTemplates] 返回失败: ${errorMsg}`);
+        // 如果返回失败，则返回到首页
+        try {
+          await routerService.navigateTo('pages/Index', undefined, true);
+        } catch (error) {
+          const navErrorMsg = error instanceof Error ? error.message : String(error);
+          console.error(`[BackgroundTemplates] 跳转首页失败: ${navErrorMsg}`);
+        }
+      }
     }
   }
 
@@ -157,9 +178,10 @@ struct BackgroundTemplates {
         .height(40)
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
-        .onClick(() => {
-          this.handleBack();
-        })
+          .onClick(async () => {
+            console.info('[BackgroundTemplates] 返回按钮被点击');
+            await this.handleBack();
+          })
 
         // 标题
         Text('背景模板')
@@ -228,10 +250,10 @@ struct BackgroundTemplates {
             .height(32)
             .backgroundColor('#F8F9FC')
             .borderRadius(16)
-            .margin({ left: 8 })
-            .onClick(() => {
-              this.handleClearSearch();
-            })
+              .margin({ left: 8 })
+              .onClick(() => {
+                this.handleClearSearch();
+              })
           }
         }
         .width('100%')
@@ -271,7 +293,7 @@ struct BackgroundTemplates {
       .border({ width: { bottom: 1 }, color: '#E5E7EB' })
 
       // 空状态提示
-      if (this.filteredTemplates.length === 0) {
+      if (!this.filteredTemplates || this.filteredTemplates.length === 0) {
         Column() {
           Image($r('app.media.startIcon'))
             .width(64)
@@ -296,7 +318,7 @@ struct BackgroundTemplates {
         // 模板网格
         Scroll() {
           Grid() {
-            ForEach(this.filteredTemplates, (template: BackgroundTemplate) => {
+            ForEach(this.filteredTemplates || [], (template: BackgroundTemplate) => {
             GridItem() {
               Column() {
                 // 模板预览图片
@@ -390,6 +412,9 @@ struct BackgroundTemplates {
         .layoutWeight(1)
         .scrollBar(BarState.Auto)
       }
+
+      // 底部导航栏
+      TabBar()
     }
     .width('100%')
     .height('100%')
