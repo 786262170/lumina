@@ -171,27 +171,6 @@ struct Login {
     }
   }
 
-  // 微信登录
-  async handleWeChatLogin() {
-    this.isLoading = true;
-    this.errorMessage = '';
-    try {
-      // TODO: 获取微信授权码
-      // 在HarmonyOS中，需要使用微信SDK获取授权码
-      // 这里先使用模拟的授权码，实际需要调用微信SDK
-      const wechatCode = 'mock_wechat_code'; // 实际应该从微信SDK获取
-      
-      const result = await this.authService.wechatLogin(wechatCode);
-      // 微信登录通常不是新用户，直接跳转到主页
-      await this.handleLoginSuccess(false);
-    } catch (error) {
-      // 错误提示已在 ApiClient 中显示，这里只更新UI状态
-      // this.errorMessage = error.message || '微信登录失败，请重试';
-    } finally {
-      this.isLoading = false;
-    }
-  }
-
   // 处理登录成功后的路由跳转
   async handleLoginSuccess(isNewUser: boolean) {
     if (isNewUser) {
@@ -457,35 +436,6 @@ struct Login {
         }
       })
       .margin({ bottom: 24 })
-
-      // 分隔符
-      Text($r('app.string.or'))
-        .fontSize(14)
-        .fontColor('#6B7280')
-        .margin({ bottom: 24 })
-
-      // 微信登录按钮
-      Button() {
-        Row() {
-          // 微信图标（使用文字符号，实际应该使用微信官方图标）
-          Text('💬')
-            .fontSize(20)
-            .margin({ right: 12 })
-          Text($r('app.string.wechat_quick_login'))
-            .fontSize(16)
-            .fontColor('#FFFFFF')
-        }
-        .justifyContent(FlexAlign.Center)
-      }
-      .type(ButtonType.Normal)
-      .width('100%')
-      .height(50)
-      .backgroundColor('#07C160')
-      .borderRadius(8)
-      .onClick(() => {
-        this.handleWeChatLogin();
-      })
-      .margin({ bottom: 40 })
 
       // 底部链接
       Row() {

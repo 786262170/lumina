@@ -44,23 +44,6 @@ export class LoginService {
   }
 
   /**
-   * 微信快捷登录
-   * @param code 微信授权码
-   * @returns 登录响应
-   */
-  async weChatLogin(code: string): Promise<LoginResponse> {
-    try {
-      const response = await this.authService.wechatLogin(code);
-      // 显示成功提示
-      ToastUtil.showSuccess('微信登录成功');
-      return response;
-    } catch (error) {
-      // 错误提示已在 ApiClient 中显示
-      throw error;
-    }
-  }
-
-  /**
    * 游客模式登录
    * @returns 登录响应
    */

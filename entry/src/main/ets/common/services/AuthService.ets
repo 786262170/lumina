@@ -27,13 +27,6 @@ export interface LoginRequest {
 }
 
 /**
- * 微信登录请求
- */
-export interface WeChatLoginRequest {
-  code: string;
-}
-
-/**
  * 用户信息
  */
 export interface UserProfile {
@@ -116,30 +109,6 @@ export class AuthService {
     const response = await this.apiClient.post<LoginResponse>(
       '/auth/login',
       { phoneNumber, verificationCode },
-      false // 不需要认证
-    );
-
-    // 保存token和用户信息
-    if (response.token) {
-      const userInfo: UserInfo = {
-        id: response.user.id,
-        phone: response.user.phoneNumber || '',
-        nickname: response.user.nickname,
-        token: response.token
-      };
-      await this.userService.saveUserInfo(userInfo);
-    }
-
-    return response;
-  }
-
-  /**
-   * 微信登录
-   */
-  async wechatLogin(code: string): Promise<LoginResponse> {
-    const response = await this.apiClient.post<LoginResponse>(
-      '/auth/wechat-login',
-      { code },
       false // 不需要认证
     );
 

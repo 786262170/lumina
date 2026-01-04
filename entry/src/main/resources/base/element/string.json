@@ -53,14 +53,6 @@
       "value": "登录"
     },
     {
-      "name": "or",
-      "value": "或"
-    },
-    {
-      "name": "wechat_quick_login",
-      "value": "微信快捷登录"
-    },
-    {
       "name": "no_account",
       "value": "还没有账号?"
     },
