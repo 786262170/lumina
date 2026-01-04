@@ -1,24 +1,8 @@
 {
   "app": {
-    "signingConfigs": [
-      {
-        "name": "default",
-        "type": "HarmonyOS",
-        "material": {
-          "certpath": "C:\\Users\\qingkui\\.ohos\\config\\default_lumina_lMBEbQlMf1_4IQ-32PvFLd9kxUmzxnJh41JgQ3Uh4dY=.cer",
-          "keyAlias": "debugKey",
-          "keyPassword": "000000194345AD6556D29A5FEDDCE4FA09F76C89B3BD193857EEEF02F23CD56C427B3305C23A080A71",
-          "profile": "C:\\Users\\qingkui\\.ohos\\config\\default_lumina_lMBEbQlMf1_4IQ-32PvFLd9kxUmzxnJh41JgQ3Uh4dY=.p7b",
-          "signAlg": "SHA256withECDSA",
-          "storeFile": "C:\\Users\\qingkui\\.ohos\\config\\default_lumina_lMBEbQlMf1_4IQ-32PvFLd9kxUmzxnJh41JgQ3Uh4dY=.p12",
-          "storePassword": "00000019871B61FD451B118BD0C839BF080A9822476580D5B2F0EB2C01D1C9BAD9A0222067D8D01FBF"
-        }
-      }
-    ],
     "products": [
       {
         "name": "default",
-        "signingConfig": "default",
         "targetSdkVersion": "6.0.0(20)",
         "compatibleSdkVersion": "6.0.0(20)",
         "runtimeOS": "HarmonyOS",
