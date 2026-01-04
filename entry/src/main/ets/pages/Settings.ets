@@ -1,7 +1,17 @@
 import router from '@ohos.router';
 import { RouterService } from '../common/services/RouterService';
 import { UserService, UserInfo } from '../common/services/UserService';
+import { UserApiService } from '../common/services/UserApiService';
+import { SettingsService, AppSettings, ImageFormat } from '../common/services/SettingsService';
+import { AuthService } from '../common/services/AuthService';
 import { TopNavBar } from '../common/components/TopNavBar';
+import { ToastUtil } from '../common/utils/ToastUtil';
+
+// 质量选项接口
+interface QualityOption {
+  label: string;
+  value: number;
+}
 
 @Entry
 @Component
@@ -9,66 +19,168 @@ struct Settings {
   @State userInfo: UserInfo | null = null;
   @State messageNotification: boolean = true; // 消息通知开关
   @State autoSave: boolean = true; // 自动保存开关
-  @State defaultQuality: string = '高清'; // 默认输出质量
-  @State storageUsed: string = '0 MB'; // 已用存储空间
-  @State storageTotal: string = '100 MB'; // 总存储空间
+  @State defaultQuality: number = 85; // 默认输出质量（数值）
+  @State defaultQualityDisplay: string = '高清'; // 默认输出质量（显示文本）
+  @State defaultFormat: ImageFormat = 'jpg'; // 默认图片格式
+  @State storageUsed: number = 0; // 已用存储空间（GB）
+  @State storageTotal: number = 1.0; // 总存储空间（GB）
   @State storageProgress: number = 0; // 存储进度百分比
   @State showQualityPicker: boolean = false; // 是否显示质量选择器
+  @State isLoading: boolean = false; // 是否正在加载
   
   private userService: UserService = UserService.getInstance();
+  private userApiService: UserApiService = UserApiService.getInstance();
+  private settingsService: SettingsService = SettingsService.getInstance();
+  private authService: AuthService = AuthService.getInstance();
   
-  // 输出质量选项
-  private qualityOptions: string[] = ['高清', '标准', '压缩'];
+  // 输出质量选项（映射到数值）
+  private qualityOptions: QualityOption[] = [
+    { label: '高清', value: 90 },
+    { label: '标清', value: 75 },
+    { label: '压缩', value: 60 }
+  ];
+  
+  // 根据质量选项获取对应的图标资源
+  getQualityIcon(quality: string): Resource {
+    switch (quality) {
+      case '高清':
+        return $r('app.media.high_quality');
+      case '标清':
+        return $r('app.media.standard_quality');
+      case '压缩':
+        return $r('app.media.archive');
+      default:
+        return $r('app.media.right');
+    }
+  }
+
+  // 根据质量数值获取显示文本
+  getQualityLabel(value: number): string {
+    const option = this.qualityOptions.find(opt => opt.value === value);
+    return option ? option.label : '高清';
+  }
 
   aboutToAppear() {
     // 加载用户信息
     this.loadUserInfo();
-    // 加载存储空间信息（模拟数据，后续可接入真实API）
+    // 加载应用设置
+    this.loadSettings();
+    // 加载存储空间信息
     this.loadStorageInfo();
   }
 
   // 加载用户信息
   async loadUserInfo() {
-    this.userInfo = await this.userService.getUserInfo();
+    try {
+      this.userInfo = await this.userService.getUserInfo();
+    } catch (error) {
+      console.error(`[Settings] 加载用户信息失败: ${error}`);
+    }
+  }
+
+  // 加载应用设置
+  async loadSettings() {
+    try {
+      this.isLoading = true;
+      const settings = await this.settingsService.getSettings();
+      
+      // 更新设置状态
+      this.messageNotification = settings.notifications;
+      this.autoSave = settings.autoSave;
+      this.defaultQuality = settings.defaultQuality;
+      this.defaultFormat = settings.defaultFormat;
+      this.defaultQualityDisplay = this.getQualityLabel(settings.defaultQuality);
+      
+      console.info(`[Settings] 成功加载应用设置`);
+    } catch (error) {
+      console.error(`[Settings] 加载应用设置失败: ${error}`);
+      // 如果加载失败，使用默认值
+      ToastUtil.showError('加载设置失败，使用默认设置');
+    } finally {
+      this.isLoading = false;
+    }
   }
 
   // 加载存储空间信息
-  loadStorageInfo() {
-    // 模拟数据，后续可接入真实API
-    this.storageUsed = '45.2 MB';
-    this.storageTotal = '100 MB';
-    // 计算进度百分比（简化处理，假设单位都是MB）
-    const used = parseFloat(this.storageUsed);
-    const total = parseFloat(this.storageTotal);
-    this.storageProgress = total > 0 ? (used / total) * 100 : 0;
+  async loadStorageInfo() {
+    try {
+      const stats = await this.userApiService.getUserStats();
+      this.storageUsed = stats.storageUsed;
+      this.storageTotal = stats.storageTotal;
+      // 计算进度百分比
+      this.storageProgress = this.storageTotal > 0 ? (this.storageUsed / this.storageTotal) * 100 : 0;
+      console.info(`[Settings] 存储空间: ${this.storageUsed}GB / ${this.storageTotal}GB`);
+    } catch (error) {
+      console.error(`[Settings] 加载存储空间信息失败: ${error}`);
+      // 如果加载失败，使用默认值
+      this.storageUsed = 0;
+      this.storageTotal = 1.0;
+      this.storageProgress = 0;
+    }
+  }
+
+  // 保存设置
+  async saveSettings() {
+    try {
+      // 将质量显示文本转换为数值
+      const qualityOption = this.qualityOptions.find(opt => opt.label === this.defaultQualityDisplay);
+      const qualityValue = qualityOption ? qualityOption.value : 85;
+      
+      await this.settingsService.updateSettings({
+        notifications: this.messageNotification,
+        autoSave: this.autoSave,
+        defaultQuality: qualityValue,
+        defaultFormat: this.defaultFormat
+      });
+      
+      // 更新本地状态
+      this.defaultQuality = qualityValue;
+      console.info(`[Settings] 设置已保存`);
+    } catch (error) {
+      console.error(`[Settings] 保存设置失败: ${error}`);
+      ToastUtil.showError('保存设置失败，请稍后重试');
+    }
   }
 
 
   // 退出登录
   async handleLogout() {
-    await this.userService.logout();
-    // 跳转到登录页面
-    RouterService.getInstance().navigateTo('pages/Login', undefined, true)
-      .catch((err: Error) => {
-      console.error(`跳转失败: ${err.message}`);
-    });
+    try {
+      // 调用后端登出接口
+      await this.authService.logout();
+      // 清除本地用户信息
+      await this.userService.logout();
+      // 跳转到登录页面
+      RouterService.getInstance().navigateTo('pages/Login', undefined, true)
+        .catch((err: Error) => {
+        console.error(`跳转失败: ${err.message}`);
+      });
+    } catch (error) {
+      console.error(`登出失败: ${error.message}`);
+      // 即使后端登出失败，也清除本地信息并跳转
+      await this.userService.logout();
+      RouterService.getInstance().navigateTo('pages/Login', undefined, true)
+        .catch((err: Error) => {
+        console.error(`跳转失败: ${err.message}`);
+      });
+    }
   }
 
   build() {
     Column() {
       // 顶部导航栏
-      TopNavBar({ title: '设置', showBack: true })
+      TopNavBar({ title: '设置', showBack: true, goBackToIndex: false })
 
       Scroll() {
         Column() {
           // 用户资料和会员卡片
           Row() {
             // 头像
-            Image($r('app.media.startIcon'))
+            Image($r('app.media.touxiang'))
               .width(60)
               .height(60)
               .borderRadius(30)
-              .backgroundColor('#E5E7EB')
+              .objectFit(ImageFit.Cover)
               .margin({ right: 16 })
 
             // 用户信息
@@ -93,10 +205,10 @@ struct Settings {
             .layoutWeight(1)
 
             // 右箭头
-            Image($r('app.media.startIcon'))
+            Image($r('app.media.right'))
               .width(20)
               .height(20)
-              .fillColor('#9CA3AF')
+              .objectFit(ImageFit.Contain)
           }
           .width('100%')
           .padding({ left: 20, right: 20, top: 20, bottom: 20 })
@@ -119,8 +231,10 @@ struct Settings {
               Toggle({ type: ToggleType.Switch, isOn: this.messageNotification })
                 .selectedColor('#6366F1')
                 .switchPointColor('#FFFFFF')
-                .onChange((isOn: boolean) => {
+                .onChange(async (isOn: boolean) => {
                   this.messageNotification = isOn;
+                  // 立即保存到服务器
+                  await this.saveSettings();
                 })
             }
             .width('100%')
@@ -142,8 +256,10 @@ struct Settings {
               Toggle({ type: ToggleType.Switch, isOn: this.autoSave })
                 .selectedColor('#6366F1')
                 .switchPointColor('#FFFFFF')
-                .onChange((isOn: boolean) => {
+                .onChange(async (isOn: boolean) => {
                   this.autoSave = isOn;
+                  // 立即保存到服务器
+                  await this.saveSettings();
                 })
             }
             .width('100%')
@@ -171,16 +287,16 @@ struct Settings {
                 .layoutWeight(1)
 
               Row() {
-              Text(this.defaultQuality)
+              Text(this.defaultQualityDisplay)
                 .fontSize(14)
                   .fontColor('#667eea')
                   .fontWeight(FontWeight.Medium)
                 .margin({ right: 8 })
 
-              Image($r('app.media.startIcon'))
+              Image(this.getQualityIcon(this.defaultQualityDisplay))
                 .width(20)
                 .height(20)
-                .fillColor('#9CA3AF')
+                .objectFit(ImageFit.Contain)
               }
               .alignItems(VerticalAlign.Center)
             }
@@ -199,15 +315,15 @@ struct Settings {
                   .color('#E5E7EB')
                   .margin({ left: 20, right: 20, bottom: 12 })
 
-                ForEach(this.qualityOptions, (quality: string) => {
+                ForEach(this.qualityOptions, (option: QualityOption) => {
                   Row() {
-                    Text(quality)
+                    Text(option.label)
                       .fontSize(14)
-                      .fontColor(this.defaultQuality === quality ? '#667eea' : '#1F2937')
-                      .fontWeight(this.defaultQuality === quality ? FontWeight.Medium : FontWeight.Regular)
+                      .fontColor(this.defaultQualityDisplay === option.label ? '#667eea' : '#1F2937')
+                      .fontWeight(this.defaultQualityDisplay === option.label ? FontWeight.Medium : FontWeight.Regular)
                       .layoutWeight(1)
 
-                    if (this.defaultQuality === quality) {
+                    if (this.defaultQualityDisplay === option.label) {
                       Stack() {
                         Circle({ width: 20, height: 20 })
                           .fill('#667eea')
@@ -224,11 +340,14 @@ struct Settings {
                   .height(44)
                   .padding({ left: 20, right: 20 })
                   .alignItems(VerticalAlign.Center)
-                  .onClick(() => {
-                    this.defaultQuality = quality;
+                  .onClick(async () => {
+                    this.defaultQualityDisplay = option.label;
+                    this.defaultQuality = option.value;
                     this.showQualityPicker = false;
-            })
-                }, (quality: string) => quality)
+                    // 立即保存到服务器
+                    await this.saveSettings();
+                  })
+                }, (option: QualityOption) => option.label)
               }
               .width('100%')
               .transition(TransitionEffect.OPACITY.animation({ duration: 200, curve: Curve.EaseInOut }))
@@ -247,15 +366,15 @@ struct Settings {
                 .fontColor('#1F2937')
                 .layoutWeight(1)
 
-              Text(`${this.storageUsed} / ${this.storageTotal}`)
+              Text(`${this.storageUsed.toFixed(2)} GB / ${this.storageTotal > 0 ? this.storageTotal.toFixed(2) : '∞'} GB`)
                 .fontSize(14)
                 .fontColor('#6B7280')
                 .margin({ right: 8 })
 
-              Image($r('app.media.startIcon'))
+              Image($r('app.media.storage'))
                 .width(20)
                 .height(20)
-                .fillColor('#9CA3AF')
+                .objectFit(ImageFit.Contain)
             }
             .width('100%')
             .height(56)
@@ -322,10 +441,10 @@ struct Settings {
                 .fontColor('#1F2937')
                 .layoutWeight(1)
 
-              Image($r('app.media.startIcon'))
+              Image($r('app.media.help'))
                 .width(20)
                 .height(20)
-                .fillColor('#9CA3AF')
+                .objectFit(ImageFit.Contain)
             }
             .width('100%')
             .height(56)
@@ -347,10 +466,10 @@ struct Settings {
                 .fontColor('#1F2937')
                 .layoutWeight(1)
 
-              Image($r('app.media.startIcon'))
+              Image($r('app.media.about'))
                 .width(20)
                 .height(20)
-                .fillColor('#9CA3AF')
+                .objectFit(ImageFit.Contain)
             }
             .width('100%')
             .height(56)

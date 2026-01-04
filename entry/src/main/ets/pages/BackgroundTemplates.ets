@@ -98,39 +98,14 @@ struct BackgroundTemplates {
     });
   }
 
-  // 返回上一页
+  // 返回首页
   async handleBack() {
     console.info('[BackgroundTemplates] handleBack 被调用');
-    const routerService = RouterService.getInstance();
-    const routeHistory = routerService.getRouteHistory();
-    
-    // 检查路由历史，判断是否应该返回到首页
-    // 如果是 Tab 页面（通过 replace 进入），历史栈可能只有当前页面
-    // 此时应该返回到首页
-    if (routeHistory.length <= 1) {
-      // 历史栈只有一页或为空，返回到首页
-      console.info('[BackgroundTemplates] 路由历史栈为空，返回到首页');
-      try {
-        await routerService.navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const errorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[BackgroundTemplates] 跳转首页失败: ${errorMsg}`);
-      }
-    } else {
-      // 尝试返回上一页
-      try {
-        await routerService.goBack();
+    try {
+      await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
       } catch (err) {
         const errorMsg = err instanceof Error ? err.message : String(err);
-        console.error(`[BackgroundTemplates] 返回失败: ${errorMsg}`);
-        // 如果返回失败，则返回到首页
-        try {
-          await routerService.navigateTo('pages/Index', undefined, true);
-        } catch (error) {
-          const navErrorMsg = error instanceof Error ? error.message : String(error);
-          console.error(`[BackgroundTemplates] 跳转首页失败: ${navErrorMsg}`);
-        }
-      }
+      console.error(`[BackgroundTemplates] 跳转首页失败: ${errorMsg}`);
     }
   }
 
@@ -168,10 +143,10 @@ struct BackgroundTemplates {
       Row() {
         // 返回按钮
         Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
+          Image($r('app.media.last'))
+            .width(20)
+            .height(20)
+            .fillColor('#1A1F36')
         }
         .type(ButtonType.Normal)
         .width(40)
@@ -179,7 +154,6 @@ struct BackgroundTemplates {
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
           .onClick(async () => {
-            console.info('[BackgroundTemplates] 返回按钮被点击');
             await this.handleBack();
           })
 
@@ -190,29 +164,46 @@ struct BackgroundTemplates {
           .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-          .margin({ left: -24 })
 
-        // 搜索按钮
-        Image($r('app.media.startIcon'))
+        // 头像按钮
+        Button() {
+          Image($r('app.media.touxiang'))
           .width(24)
           .height(24)
-          .fillColor('#6B7280')
+            .objectFit(ImageFit.Contain)
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
           .margin({ right: 12 })
           .onClick(() => {
-            this.showSearchBar = !this.showSearchBar;
-            if (!this.showSearchBar) {
-              this.searchKeyword = '';
-            }
+          // 跳转到我的页面
+          RouterService.getInstance().switchTab(3)
+            .catch((err: Error) => {
+              console.error(`切换Tab失败: ${err.message}`);
+            });
           })
 
-        // 筛选按钮
-        Image($r('app.media.startIcon'))
+        // 设置按钮
+        Button() {
+          Image($r('app.media.settings'))
           .width(24)
           .height(24)
-          .fillColor('#6B7280')
+            .objectFit(ImageFit.Contain)
+        }
+        .type(ButtonType.Normal)
+        .width(40)
+        .height(40)
+        .backgroundColor('#F8F9FC')
+        .borderRadius(8)
           .onClick(() => {
-            this.showFilter = !this.showFilter;
+          // 跳转到设置页面
+          RouterService.getInstance().navigateTo('pages/Settings')
+            .catch((err: Error) => {
+              console.error(`跳转失败: ${err.message}`);
+            });
           })
       }
       .width('100%')
@@ -295,10 +286,10 @@ struct BackgroundTemplates {
       // 空状态提示
       if (!this.filteredTemplates || this.filteredTemplates.length === 0) {
         Column() {
-          Image($r('app.media.startIcon'))
+          Image($r('app.media.mubanpipei'))
             .width(64)
             .height(64)
-            .fillColor('#9CA3AF')
+            .objectFit(ImageFit.Contain)
             .margin({ bottom: 16 })
 
           Text('未找到匹配的模板')

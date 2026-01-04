@@ -16,7 +16,8 @@ struct MyWorks {
     { id: '淘宝', title: '淘宝' },
     { id: '抖音', title: '抖音' },
     { id: '小红书', title: '小红书' },
-    { id: '亚马', title: '亚马' }
+    { id: '亚马逊', title: '亚马逊' },
+    { id: '自定义', title: '自定义' }
   ];
   
   // 作品列表（当前为空）
@@ -75,7 +76,7 @@ struct MyWorks {
       '淘宝': 'taobao',
       '抖音': 'douyin',
       '小红书': 'xiaohongshu',
-      '亚马': 'amazon'
+      '亚马逊': 'amazon'
     };
     return map[tab];
   }
@@ -96,41 +97,12 @@ struct MyWorks {
   // 返回上一页
   async handleBack() {
     console.info('[MyWorks] handleBack 被调用');
-    const routerService = RouterService.getInstance();
-    const routeHistory = routerService.getRouteHistory();
-    const currentRoute = routerService.getCurrentRoute();
-    
-    console.info(`[MyWorks] 当前路由: ${currentRoute}, 历史栈长度: ${routeHistory.length}, 历史栈: ${JSON.stringify(routeHistory)}`);
-    
-    // 检查路由历史，判断是否应该返回到首页
-    // Tab 页面通过 switchTab 进入时，历史栈应该至少有 Index
-    if (routeHistory.length <= 1) {
-      // 历史栈只有一页或为空，返回到首页
-      console.info('[MyWorks] 路由历史栈为空或只有一页，返回到首页');
-      await routerService.navigateTo('pages/Index', undefined, true)
-        .catch((error: Error) => {
-          console.error(`[MyWorks] 跳转首页失败: ${error.message}`);
-        });
-    } else if (routeHistory.length === 2 && routeHistory[0] === 'pages/Index') {
-      // 历史栈有两页，第一页是 Index，说明是通过 Tab 切换进入的
-      // 直接返回到 Index
-      console.info('[MyWorks] 通过 Tab 切换进入，返回到首页');
-      await routerService.navigateTo('pages/Index', undefined, true)
-        .catch((error: Error) => {
-          console.error(`[MyWorks] 跳转首页失败: ${error.message}`);
-        });
-    } else {
-      // 尝试返回上一页
-      console.info('[MyWorks] 尝试返回上一页');
-      await routerService.goBack()
-        .catch((err: Error) => {
-          console.error(`[MyWorks] 返回失败: ${err.message}`);
-          // 如果返回失败，则返回到首页
-          routerService.navigateTo('pages/Index', undefined, true)
-            .catch((error: Error) => {
-              console.error(`[MyWorks] 跳转首页失败: ${error.message}`);
-            });
-        });
+    try {
+      await RouterService.getInstance().goBack();
+    } catch (err) {
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[MyWorks] 返回失败: ${errorMsg}`);
+      // RouterService.goBack() 内部已经处理了错误情况，这里只是记录日志
     }
   }
 
@@ -140,10 +112,10 @@ struct MyWorks {
       Row() {
         // 返回按钮
         Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
+            Image($r('app.media.last'))
+              .width(20)
+              .height(20)
+              .fillColor('#1A1F36')
         }
         .type(ButtonType.Normal)
         .width(40)
@@ -151,8 +123,7 @@ struct MyWorks {
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
         .onClick(async () => {
-          console.info('[MyWorks] 返回按钮被点击');
-          await this.handleBack();
+            await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
         })
 
         // 标题
@@ -162,7 +133,6 @@ struct MyWorks {
           .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
 
         // 选择按钮
         Button() {
@@ -212,7 +182,7 @@ struct MyWorks {
         .padding({ left: 20, right: 20 })
       }
       .scrollable(ScrollDirection.Horizontal)
-      .scrollBar(BarState.Off)
+      .scrollBar(BarState.Auto)
       .width('100%')
       .height(48)
       .backgroundColor('#FFFFFF')
@@ -239,16 +209,8 @@ struct MyWorks {
       if (this.worksList.length === 0) {
         // 空状态
         Column() {
-          // 文件夹图标
-          Stack() {
-            Circle({ width: 100, height: 100 })
-              .fill('#F8F9FC')
-
-          Image($r('app.media.startIcon'))
-              .width(60)
-              .height(60)
-              .fillColor('#C7C7CC')
-          }
+          // 作品图标
+          Image($r('app.media.zuopin'))
             .width(100)
             .height(100)
             .margin({ bottom: 32 })
@@ -273,8 +235,8 @@ struct MyWorks {
             .fontColor('#667eea')
             .decoration({ type: TextDecorationType.Underline })
             .onClick(() => {
-              // 跳转到工作台
-              RouterService.getInstance().navigateTo('pages/Workbench')
+              // 跳转到首页
+              RouterService.getInstance().navigateTo('pages/Index')
                 .catch((err: Error) => {
                   console.error(`跳转失败: ${err.message}`);
                 });

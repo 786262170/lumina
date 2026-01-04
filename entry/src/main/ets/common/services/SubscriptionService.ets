@@ -70,7 +70,7 @@ export interface CreateOrderRequest {
 export interface OrderResponse {
   orderId: string;
   amount: number;
-  paymentInfo: Record<string, any>;
+  paymentInfo: Record<string, ESObject>;
   expiresAt: string;
 }
 
@@ -107,9 +107,16 @@ export class SubscriptionService {
 
   /**
    * 获取当前订阅
+   * @param showErrorToast 是否显示错误提示（默认 false，因为 404 表示用户未订阅，是正常情况）
    */
-  async getCurrentSubscription(): Promise<CurrentSubscriptionResponse> {
-    return this.apiClient.get<CurrentSubscriptionResponse>('/subscription/current');
+  async getCurrentSubscription(showErrorToast: boolean = false): Promise<CurrentSubscriptionResponse> {
+    return this.apiClient.get<CurrentSubscriptionResponse>(
+      '/subscription/current',
+      true, // needAuth
+      undefined, // headers
+      false, // showSuccessToast
+      showErrorToast // showErrorToast
+    );
   }
 
   /**

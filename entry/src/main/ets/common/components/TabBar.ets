@@ -57,10 +57,9 @@ export struct TabBar {
             .margin({ bottom: 4 })
         }
 
-        Image($r('app.media.startIcon'))
+        Image($r('app.media.home'))
           .width(24)
           .height(24)
-          .fillColor(this.currentTab === 0 ? '#667eea' : '#6B7280')
 
         Text($r('app.string.homepage'))
           .fontSize(12)
@@ -115,10 +114,9 @@ export struct TabBar {
             .margin({ bottom: 4 })
         }
 
-        Image($r('app.media.startIcon'))
+        Image($r('app.media.scenario_manage'))
           .width(24)
           .height(24)
-          .fillColor(this.currentTab === 1 ? '#667eea' : '#6B7280')
 
         Text($r('app.string.scenarios'))
           .fontSize(12)
@@ -173,10 +171,10 @@ export struct TabBar {
             .margin({ bottom: 4 })
         }
 
-        Image($r('app.media.startIcon'))
+        Image($r('app.media.zuopin'))
           .width(24)
           .height(24)
-          .fillColor(this.currentTab === 2 ? '#667eea' : '#6B7280')
+          .objectFit(ImageFit.Contain)
 
         Text($r('app.string.works'))
           .fontSize(12)
@@ -231,10 +229,9 @@ export struct TabBar {
             .margin({ bottom: 4 })
         }
 
-        Image($r('app.media.startIcon'))
+        Image($r('app.media.my'))
           .width(24)
           .height(24)
-          .fillColor(this.currentTab === 3 ? '#667eea' : '#6B7280')
 
         Text($r('app.string.my'))
           .fontSize(12)

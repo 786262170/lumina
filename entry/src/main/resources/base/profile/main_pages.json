@@ -7,7 +7,6 @@
     "pages/Login",
     "pages/Index",
     "pages/ScenarioDetail",
-    "pages/Workbench",
     "pages/ProcessResult",
     "pages/BatchProcess",
     "pages/MyWorks",

@@ -27,21 +27,14 @@ struct BatchProcess {
   // 尺寸预设选项
   private sizePresets: string[] = ['2000x2000', '1600x1600', '自定义'];
 
-  // 返回上一页
+  // 返回首页
   async handleBack() {
     console.info('[BatchProcess] handleBack 被调用');
     try {
-      await RouterService.getInstance().goBack();
+      await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[BatchProcess] 返回失败: ${errorMsg}`);
-      // 如果无法返回，则返回到首页
-      try {
-        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const navErrorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[BatchProcess] 跳转首页失败: ${navErrorMsg}`);
-      }
+      console.error(`[BatchProcess] 跳转首页失败: ${errorMsg}`);
     }
   }
 
@@ -57,10 +50,10 @@ struct BatchProcess {
         Row() {
           // 返回按钮
           Button() {
-            Text('<')
-              .fontSize(20)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#1A1F36')
+            Image($r('app.media.last'))
+              .width(20)
+              .height(20)
+              .fillColor('#1A1F36')
           }
           .type(ButtonType.Normal)
           .width(40)
@@ -78,7 +71,6 @@ struct BatchProcess {
             .fontColor('#1A1F36')
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
-            .margin({ left: -40 })
         }
         .layoutWeight(1)
         
@@ -500,7 +492,7 @@ struct BatchProcess {
       // 模拟处理过程
       await new Promise<void>(resolve => setTimeout(resolve, 2000));
 
-      // 跳转到工作台页面
+      // 跳转到处理结果页面
       const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
       params['imagePaths'] = this.selectedImagePaths;
       params['imageUris'] = this.selectedImageUris;
@@ -509,8 +501,8 @@ struct BatchProcess {
       params['isBatch'] = true;
       params['backgroundTemplate'] = this.selectedBackgroundIndex;
       params['sizePreset'] = this.selectedSizePreset;
-      RouterService.getInstance().navigateTo('pages/Workbench', params).catch((err: Error) => {
-        console.error(`跳转到工作台失败: ${err.message}`);
+      RouterService.getInstance().navigateTo('pages/ProcessResult', params).catch((err: Error) => {
+        console.error(`跳转到处理结果页面失败: ${err.message}`);
       });
     } catch (err) {
       console.error(`批量处理失败: ${JSON.stringify(err)}`);

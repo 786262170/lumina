@@ -1,5 +1,6 @@
 import router from '@ohos.router';
 import { RouterService } from '../common/services/RouterService';
+import { WorkService } from '../common/services/WorkService';
 import { TopNavBar } from '../common/components/TopNavBar';
 
 // 批量结果接口
@@ -31,22 +32,20 @@ struct ProcessResult {
   // 批量结果（如果有）
   @State batchResults: BatchResult[] = [];
   @State currentResultIndex: number = 0;
+  
+  // 作品ID（如果有）
+  @State workId: string = '';
+  
+  private workService: WorkService = WorkService.getInstance();
 
-  // 返回上一页
+  // 返回首页
   async handleBack() {
     console.info('[ProcessResult] handleBack 被调用');
     try {
-      await RouterService.getInstance().goBack();
+      await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[ProcessResult] 返回失败: ${errorMsg}`);
-      // 如果无法返回，则返回到首页
-      try {
-        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const navErrorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[ProcessResult] 跳转首页失败: ${navErrorMsg}`);
-      }
+      console.error(`[ProcessResult] 跳转首页失败: ${errorMsg}`);
     }
   }
 
@@ -59,6 +58,7 @@ struct ProcessResult {
       this.originalImageUri = params['originalImageUri'] as string || params['imageUri'] as string || '';
       this.processedImageUri = params['processedImageUri'] as string || params['imageUri'] as string || '';
       this.scenarioTitle = params['scenarioTitle'] as string || '';
+      this.workId = params['workId'] as string || '';
       
       // 如果有图片信息参数，则使用
       if (params['fileName']) {
@@ -78,6 +78,35 @@ struct ProcessResult {
       if (!this.processedImagePath && this.originalImagePath) {
         this.processedImagePath = this.originalImagePath;
       }
+      
+      // 如果有作品ID，调用接口获取作品详情
+      if (this.workId) {
+        this.loadWorkDetail(this.workId);
+      }
+    }
+  }
+
+  // 加载作品详情
+  async loadWorkDetail(workId: string) {
+    try {
+      const workDetail = await this.workService.getWorkDetail(workId);
+      console.info(`[ProcessResult] 成功加载作品详情: ${workDetail.filename}`);
+      
+      // 更新图片信息
+      if (workDetail.imageUrl) {
+        this.processedImageUri = workDetail.imageUrl;
+      }
+      if (workDetail.filename) {
+        this.fileName = workDetail.filename;
+      }
+      
+      // 如果有处理前的图片URL，也可以更新
+      if (workDetail.beforeImage && (workDetail.beforeImage as ESObject).url) {
+        this.originalImageUri = (workDetail.beforeImage as ESObject).url as string;
+      }
+    } catch (error) {
+      console.error(`[ProcessResult] 加载作品详情失败: ${error.message}`);
+      // 不影响页面正常显示，只是没有作品详情信息
     }
   }
 
@@ -89,10 +118,10 @@ struct ProcessResult {
         Row() {
           // 返回按钮
           Button() {
-            Text('<')
-              .fontSize(20)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#1A1F36')
+            Image($r('app.media.last'))
+              .width(20)
+              .height(20)
+              .fillColor('#1A1F36')
           }
           .type(ButtonType.Normal)
           .width(40)
@@ -110,7 +139,6 @@ struct ProcessResult {
             .fontColor('#1A1F36')
             .layoutWeight(1)
             .textAlign(TextAlign.Center)
-            .margin({ left: -40 })
         }
         .layoutWeight(1)
         
@@ -515,14 +543,8 @@ struct ProcessResult {
   // 重新处理
   async handleReprocess() {
     console.info('重新处理');
-    // 跳转到工作台页面，使用原始图片重新处理
-    const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
-    params['imagePath'] = this.originalImagePath;
-    params['imageUri'] = this.originalImageUri;
-    params['scenarioId'] = this.scenarioTitle;
-    params['scenarioTitle'] = this.scenarioTitle;
-    params['isBatch'] = false;
-    await RouterService.getInstance().navigateTo('pages/Workbench', params).catch((err: Error) => {
+    // 返回首页重新选择场景
+    RouterService.getInstance().navigateTo('pages/Index').catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }
@@ -530,14 +552,8 @@ struct ProcessResult {
   // 调整效果
   handleAdjustEffect() {
     console.info('调整效果');
-    // 跳转到工作台页面进行进一步编辑
-    const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
-    params['imagePath'] = this.processedImagePath;
-    params['imageUri'] = this.processedImageUri;
-    params['scenarioId'] = this.scenarioTitle;
-    params['scenarioTitle'] = this.scenarioTitle;
-    params['isBatch'] = false;
-    RouterService.getInstance().navigateTo('pages/Workbench', params).catch((err: Error) => {
+    // 返回首页重新选择场景
+    RouterService.getInstance().navigateTo('pages/Index').catch((err: Error) => {
       console.error(`跳转失败: ${err.message}`);
     });
   }

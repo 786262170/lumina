@@ -4,6 +4,7 @@ import { picker } from '@kit.CoreFileKit';
 import { BackgroundTemplate } from '../common/types/CommonTypes';
 import { TopNavBar } from '../common/components/TopNavBar';
 import { ImageService, SceneType, ImageOperation, ImageOperationParams, ProcessImageRequest, FileData } from '../common/services/ImageService';
+import { SceneService } from '../common/services/SceneService';
 import { ToastUtil } from '../common/utils/ToastUtil';
 import { UserService } from '../common/services/UserService';
 import fs from '@ohos.file.fs';
@@ -31,22 +32,16 @@ struct ScenarioDetail {
   @State edgeSmoothing: boolean = true; // 边缘平滑
 
   private imageService: ImageService = ImageService.getInstance();
+  private sceneService: SceneService = SceneService.getInstance();
 
-  // 返回上一页
+  // 返回首页
   async handleBack() {
     console.info('[ScenarioDetail] handleBack 被调用');
     try {
-      await RouterService.getInstance().goBack();
+      await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[ScenarioDetail] 返回失败: ${errorMsg}`);
-      // 如果无法返回，则返回到首页
-      try {
-        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const navErrorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[ScenarioDetail] 跳转首页失败: ${navErrorMsg}`);
-      }
+      console.error(`[ScenarioDetail] 跳转首页失败: ${errorMsg}`);
     }
   }
 
@@ -70,6 +65,34 @@ struct ScenarioDetail {
         this.selectedTemplate = template;
         console.info(`已选择模板: ${template.title}`);
       }
+      
+      // 如果有场景ID，调用接口获取场景详情
+      if (this.scenarioId) {
+        this.loadSceneDetail(this.scenarioId as SceneType);
+      }
+    }
+  }
+
+  // 加载场景详情
+  async loadSceneDetail(sceneType: SceneType) {
+    try {
+      const sceneDetail = await this.sceneService.getSceneDetail(sceneType);
+      console.info(`[ScenarioDetail] 成功加载场景详情: ${sceneDetail.title}`);
+      
+      // 如果场景详情中有默认操作，可以应用到当前设置
+      if (sceneDetail.defaultOperations && sceneDetail.defaultOperations.length > 0) {
+        // 可以根据场景详情更新默认设置
+        console.info(`[ScenarioDetail] 场景默认操作: ${JSON.stringify(sceneDetail.defaultOperations)}`);
+      }
+      
+      // 如果场景详情中有预设尺寸，可以更新输出尺寸
+      if (sceneDetail.presetSizes && sceneDetail.presetSizes.length > 0) {
+        this.outputSize = sceneDetail.presetSizes[0];
+        console.info(`[ScenarioDetail] 使用场景默认尺寸: ${this.outputSize}`);
+      }
+    } catch (error) {
+      console.error(`[ScenarioDetail] 加载场景详情失败: ${error.message}`);
+      // 不影响页面正常使用，只是没有场景详情信息
     }
   }
 
@@ -79,10 +102,10 @@ struct ScenarioDetail {
       Row() {
         // 返回按钮
         Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
+          Image($r('app.media.last'))
+            .width(20)
+            .height(20)
+            .fillColor('#1A1F36')
         }
         .type(ButtonType.Normal)
         .width(40)
@@ -90,7 +113,6 @@ struct ScenarioDetail {
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
           .onClick(async () => {
-            console.info('[ScenarioDetail] 返回按钮被点击');
             await this.handleBack();
           })
 
@@ -101,21 +123,17 @@ struct ScenarioDetail {
           .fontColor('#1A1F36')
           .layoutWeight(1)
           .textAlign(TextAlign.Center)
-          .margin({ left: -40 })
-          .textAlign(TextAlign.Center)
-          .margin({ left: -24 })
 
-        // 帮助按钮
-        Image($r('app.media.startIcon'))
+        // 设置按钮
+        Image($r('app.media.settings'))
           .width(24)
           .height(24)
-          .fillColor('#6B7280')
           .borderRadius(12)
           .backgroundColor('#F3F4F6')
           .padding(4)
           .onClick(() => {
-            // 显示帮助信息（后续实现）
-            console.info('显示帮助信息');
+            // 显示设置信息（后续实现）
+            console.info('显示设置信息');
           })
       }
       .width('100%')
@@ -660,45 +678,29 @@ struct ScenarioDetail {
   // 选择单张图片
   async selectImage() {
     try {
-      // 优先尝试使用文件选择器（DocumentViewPicker），这样可以避免媒体库URI的问题
-      // 如果文件选择器不可用，再使用相册选择器
-      try {
-        const documentPicker = new picker.DocumentViewPicker();
-        const documentSelectOptions = new picker.DocumentSelectOptions();
-        documentSelectOptions.fileSuffixFilters = ['.jpg', '.jpeg', '.png', '.webp'];
-        documentSelectOptions.maxSelectNumber = 1;
-        
-        const documentSelectResult = await documentPicker.select(documentSelectOptions);
-        if (documentSelectResult && documentSelectResult.length > 0) {
-          this.selectedImageUri = documentSelectResult[0];
-          this.selectedImagePath = this.selectedImageUri;
-          console.info(`已选择图片（文件选择器）: ${this.selectedImageUri}`);
-          return;
-        }
-      } catch (docError) {
-        console.warn(`文件选择器失败，尝试使用相册选择器: ${docError}`);
-      }
+      // 在模拟器环境中，媒体库文件（图库中的截图）无法通过文件系统访问
+      // 因此只使用文件选择器（DocumentViewPicker），引导用户使用文件管理器选择
+      const documentPicker = new picker.DocumentViewPicker();
+      const documentSelectOptions = new picker.DocumentSelectOptions();
+      documentSelectOptions.fileSuffixFilters = ['.jpg', '.jpeg', '.png', '.webp'];
+      documentSelectOptions.maxSelectNumber = 1;
       
-      // 如果文件选择器失败，使用相册选择器（但可能无法读取）
-      const photoPicker = new picker.PhotoViewPicker();
-      const photoSelectOptions = new picker.PhotoSelectOptions();
-      photoSelectOptions.MIMEType = picker.PhotoViewMIMETypes.IMAGE_TYPE;
-      photoSelectOptions.maxSelectNumber = 1;
-
-      const photoSelectResult = await photoPicker.select(photoSelectOptions);
-      if (photoSelectResult && photoSelectResult.photoUris && photoSelectResult.photoUris.length > 0) {
-        this.selectedImageUri = photoSelectResult.photoUris[0];
-        // 将URI转换为路径用于显示
+      const documentSelectResult = await documentPicker.select(documentSelectOptions);
+      if (documentSelectResult && documentSelectResult.length > 0) {
+        this.selectedImageUri = documentSelectResult[0];
         this.selectedImagePath = this.selectedImageUri;
-        console.info(`已选择图片（相册选择器）: ${this.selectedImageUri}`);
-        // 提示用户：如果选择的是相册中的图片，可能无法读取，建议使用文件选择器
+        console.info(`已选择图片（文件选择器）: ${this.selectedImageUri}`);
+        
+        // 检查是否仍然是媒体库URI（模拟器限制）
         if (this.selectedImageUri.startsWith('file://media/Photo/')) {
-          ToastUtil.showError('提示：从相册选择的图片可能无法读取，建议使用文件管理器选择图片');
+          ToastUtil.showError('模拟器限制：无法读取图库中的图片。请使用文件管理器选择图片文件（选择"文件"选项，不要选择"相册"）');
         }
+      } else {
+        ToastUtil.showError('未选择图片，请重试');
       }
     } catch (err) {
       console.error(`选择图片失败: ${JSON.stringify(err)}`);
-      ToastUtil.showError('选择图片失败，请重试');
+      ToastUtil.showError('选择图片失败。提示：在模拟器中请使用文件管理器选择图片（选择"文件"选项），不要从图库选择');
     }
   }
 
@@ -780,7 +782,7 @@ struct ScenarioDetail {
         }
         console.info('批量图片处理完成');
         
-        // 跳转到工作台页面
+        // 跳转到批量处理页面
         const batchParams: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
         batchParams['imagePaths'] = this.selectedImagePaths;
         batchParams['imageUris'] = this.selectedImageUris;
@@ -789,8 +791,8 @@ struct ScenarioDetail {
         batchParams['isBatch'] = true;
         batchParams['templateId'] = this.selectedTemplate?.id || '';
         batchParams['templateTitle'] = this.selectedTemplate?.title || '';
-        RouterService.getInstance().navigateTo('pages/Workbench', batchParams).catch((err: Error) => {
-          console.error(`跳转到工作台失败: ${err.message}`);
+        RouterService.getInstance().navigateTo('pages/BatchProcess', batchParams).catch((err: Error) => {
+          console.error(`跳转到批量处理页面失败: ${err.message}`);
         });
       } else {
         console.info(`开始处理图片，场景：${this.scenarioTitle}, URI: ${this.selectedImageUri}`);
@@ -860,78 +862,54 @@ struct ScenarioDetail {
               
               fileName = foundAsset.displayName || 'image.jpg';
               
-              // 尝试使用 PhotoAsset 的方法读取文件内容
+              // 使用 PhotoAsset 读取文件内容
               const assetUri: string = foundAsset.uri;
               console.info(`[ScenarioDetail] 使用 PhotoAsset 读取文件: ${assetUri}`);
               
-              // 方法1: 尝试将文件复制到应用沙箱目录
+              // 方法1: 尝试使用 fileIo 直接读取 URI
               try {
-                console.info(`[ScenarioDetail] 尝试将文件复制到应用沙箱目录`);
-                const userService: UserService = UserService.getInstance();
-                const context: Context | null = userService.getContext();
-                
-                if (!context) {
-                  throw new Error('无法获取应用上下文');
-                }
-                
-                // 获取应用缓存目录
-                const cacheDir: string = context.cacheDir;
-                const tempFilePath: string = `${cacheDir}/${fileName}`;
-                
-                console.info(`[ScenarioDetail] 目标路径: ${tempFilePath}`);
-                
-                // 使用 fs 模块复制文件
-                // 先尝试读取源文件
-                const srcFile = fs.openSync(assetUri, fs.OpenMode.READ_ONLY);
-                const srcStat = fs.statSync(assetUri);
-                const fileSize: number = srcStat.size;
-                
-                // 读取源文件内容
-                const buffer = new ArrayBuffer(fileSize);
-                fs.readSync(srcFile.fd, buffer);
-                fs.closeSync(srcFile);
-                
-                // 写入临时文件
-                const destFile = fs.openSync(tempFilePath, fs.OpenMode.WRITE_ONLY | fs.OpenMode.CREATE);
-                fs.writeSync(destFile.fd, buffer);
-                fs.closeSync(destFile);
-                
-                // 从临时文件读取（验证）
-                const tempFile = fs.openSync(tempFilePath, fs.OpenMode.READ_ONLY);
+                console.info(`[ScenarioDetail] 尝试使用 fileIo 读取 PhotoAsset URI`);
+                const fd: number = await fileIo.open(assetUri, 0);
+                const stat: fileIo.Stat = await fileIo.stat(assetUri);
+                const fileSize: number = stat.size;
                 fileBuffer = new ArrayBuffer(fileSize);
-                fs.readSync(tempFile.fd, fileBuffer);
-                fs.closeSync(tempFile);
+                await fileIo.read(fd, fileBuffer);
+                await fileIo.close(fd);
+                console.info(`[ScenarioDetail] 通过 fileIo 成功读取文件: ${fileName}, 大小: ${fileSize}`);
+              } catch (fileIoError) {
+                console.warn(`[ScenarioDetail] fileIo 读取失败: ${fileIoError}`);
                 
-                console.info(`[ScenarioDetail] 通过文件复制成功读取文件: ${fileName}, 大小: ${fileSize}`);
-              } catch (copyError) {
-                console.warn(`[ScenarioDetail] 文件复制失败: ${copyError}`);
-                
-                // 方法2: 尝试使用 fileIo 模块直接读取 URI
+                // 方法2: 尝试将 URI 转换为实际文件路径
                 try {
-                  console.info(`[ScenarioDetail] 尝试使用 fileIo 模块读取 URI: ${assetUri}`);
-                  const file: number = await fileIo.open(assetUri, 0);
-                  const stat: fileIo.Stat = await fileIo.stat(assetUri);
+                  console.info(`[ScenarioDetail] 尝试转换 URI 为文件路径`);
+                  let filePath: string = assetUri.replace('file://', '');
+                  if (!filePath.startsWith('/')) {
+                    filePath = '/' + filePath;
+                  }
+                  console.info(`[ScenarioDetail] 转换后的路径: ${filePath}`);
+                  const fd: number = await fileIo.open(filePath, 0);
+                  const stat: fileIo.Stat = await fileIo.stat(filePath);
                   const fileSize: number = stat.size;
                   fileBuffer = new ArrayBuffer(fileSize);
-                  await fileIo.read(file, fileBuffer);
-                  await fileIo.close(file);
-                  console.info(`[ScenarioDetail] 通过 fileIo 成功读取文件: ${fileName}, 大小: ${fileSize}`);
-                } catch (fileIoError) {
-                  console.warn(`[ScenarioDetail] fileIo 读取失败: ${fileIoError}`);
+                  await fileIo.read(fd, fileBuffer);
+                  await fileIo.close(fd);
+                  console.info(`[ScenarioDetail] 通过路径转换成功读取文件: ${fileName}, 大小: ${fileSize}`);
+                } catch (pathError) {
+                  console.warn(`[ScenarioDetail] 路径转换读取失败: ${pathError}`);
                   
-                  // 方法3: 尝试使用 fs 模块直接读取 URI
+                  // 方法3: 尝试使用 fs 模块读取
                   try {
-                    console.info(`[ScenarioDetail] 尝试使用 fs 模块直接读取 URI: ${assetUri}`);
+                    console.info(`[ScenarioDetail] 尝试使用 fs 模块读取 URI`);
                     const file = fs.openSync(assetUri, fs.OpenMode.READ_ONLY);
                     const stat = fs.statSync(assetUri);
                     const fileSize: number = stat.size;
                     fileBuffer = new ArrayBuffer(fileSize);
                     fs.readSync(file.fd, fileBuffer);
                     fs.closeSync(file);
-                    console.info(`[ScenarioDetail] 通过 fs 直接读取 URI 成功: ${fileName}, 大小: ${fileSize}`);
+                    console.info(`[ScenarioDetail] 通过 fs 模块成功读取文件: ${fileName}, 大小: ${fileSize}`);
                   } catch (fsError) {
-                    console.warn(`[ScenarioDetail] fs 直接读取 URI 失败: ${fsError}`);
-                    throw new Error('无法读取媒体库文件。请使用文件管理器选择图片，或使用相机拍摄新图片');
+                    console.warn(`[ScenarioDetail] fs 模块读取失败: ${fsError}`);
+                    throw new Error('无法读取媒体库文件。请在文件选择器中选择"文件"选项（而不是"相册"选项）');
                   }
                 }
               }
@@ -1055,7 +1033,7 @@ struct ScenarioDetail {
           console.info('[ScenarioDetail] 图片处理完成');
           ToastUtil.showSuccess('图片处理完成');
           
-          // 5. 跳转到工作台页面
+          // 5. 跳转到处理结果页面
           const singleParams: Record<string, string | number | boolean | string[] | undefined> = {};
           singleParams['imagePath'] = this.selectedImagePath;
           singleParams['imageUri'] = this.selectedImageUri;
@@ -1068,8 +1046,8 @@ struct ScenarioDetail {
           singleParams['processedImageId'] = result.resultImage.id;
           singleParams['processedImageUrl'] = result.resultImage.url;
           
-          RouterService.getInstance().navigateTo('pages/Workbench', singleParams).catch((err: Error) => {
-            console.error(`跳转到工作台失败: ${err.message}`);
+          RouterService.getInstance().navigateTo('pages/ProcessResult', singleParams).catch((err: Error) => {
+            console.error(`跳转到处理结果页面失败: ${err.message}`);
             ToastUtil.showError(`跳转失败: ${err.message}`);
           });
         } catch (error) {

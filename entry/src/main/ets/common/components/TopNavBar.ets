@@ -15,24 +15,41 @@ import { RouterService } from '../services/RouterService';
 export struct TopNavBar {
   @Prop title: string = ''; // 标题
   @Prop showBack: boolean = true; // 是否显示返回按钮
+  @Prop goBackToIndex: boolean = false; // true: 返回首页, false: 返回上一级（子页面使用）
+  @Prop disableNavigation: boolean = false; // true: 禁用跳转功能（仅UI展示）
   private routerService: RouterService = RouterService.getInstance();
 
   /**
-   * 返回上一页
+   * 返回处理
    */
   private async handleBack() {
-    console.info(`[TopNavBar] 返回按钮被点击，标题: ${this.title}`);
+    console.info(`[TopNavBar] 返回按钮被点击，标题: ${this.title}, goBackToIndex: ${this.goBackToIndex}, disableNavigation: ${this.disableNavigation}`);
+    
+    // 如果禁用了跳转，只打印日志
+    if (this.disableNavigation) {
+      console.info('[TopNavBar] 跳转功能已禁用，仅UI展示');
+      return;
+    }
+    
     try {
+      if (this.goBackToIndex) {
+        // 返回首页
+        await this.routerService.navigateTo('pages/Index', undefined, true);
+      } else {
+        // 返回上一级
       await this.routerService.goBack();
-    } catch (err) {
-      const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[TopNavBar] 返回失败: ${errorMsg}`);
-      // 如果无法返回，则返回到首页
+      }
+    } catch (error) {
+      const navErrorMsg = error instanceof Error ? error.message : String(error);
+      console.error(`[TopNavBar] 返回失败: ${navErrorMsg}`);
+      // 如果返回上一级失败，尝试返回首页
+      if (!this.goBackToIndex) {
       try {
         await this.routerService.navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const navErrorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[TopNavBar] 跳转首页失败: ${navErrorMsg}`);
+        } catch (fallbackError) {
+          const fallbackMsg = fallbackError instanceof Error ? fallbackError.message : String(fallbackError);
+          console.error(`[TopNavBar] 返回首页也失败: ${fallbackMsg}`);
+        }
       }
     }
   }
@@ -42,19 +59,22 @@ export struct TopNavBar {
       // 返回按钮
       if (this.showBack) {
         Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
+          Image($r('app.media.last'))
+            .width(20)
+            .height(20)
+            .fillColor('#1A1F36')
         }
         .type(ButtonType.Normal)
         .width(40)
         .height(40)
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
-        .onClick(async () => {
-          await this.handleBack();
+        .onClick(() => {
+          this.handleBack();
         })
+      } else {
+        Blank()
+          .width(40)
       }
 
       // 标题
@@ -64,7 +84,10 @@ export struct TopNavBar {
         .fontColor('#1A1F36')
         .layoutWeight(1)
         .textAlign(TextAlign.Center)
-        .margin({ left: this.showBack ? -40 : 0 })
+
+      // 占位，保持标题居中
+      Blank()
+        .width(40)
     }
     .width('100%')
     .height(56)

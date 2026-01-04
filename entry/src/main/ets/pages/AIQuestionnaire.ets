@@ -1,5 +1,6 @@
 import router from '@ohos.router';
-import { RouterService } from '../common/services/RouterService';
+import { RouterService, RouteParams } from '../common/services/RouterService';
+import { AIService } from '../common/services/AIService';
 import { ProductOption, Question } from '../common/types/CommonTypes';
 
 @Entry
@@ -56,22 +57,20 @@ struct AIQuestionnaire {
   
   private iconSettings: RenderingContextSettings = new RenderingContextSettings(true);
   private iconContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.iconSettings);
+  
+  // 答案记录
+  @State answers: Record<string, string> = {};
+  
+  private aiService: AIService = AIService.getInstance();
 
-  // 返回上一页
+  // 返回首页
   async handleBack() {
     console.info('[AIQuestionnaire] handleBack 被调用');
     try {
-      await RouterService.getInstance().goBack();
+      await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[AIQuestionnaire] 返回失败: ${errorMsg}`);
-      // 如果无法返回，则返回到首页
-      try {
-        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const navErrorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[AIQuestionnaire] 跳转首页失败: ${navErrorMsg}`);
-      }
+      console.error(`[AIQuestionnaire] 跳转首页失败: ${errorMsg}`);
     }
   }
 
@@ -81,10 +80,10 @@ struct AIQuestionnaire {
       Row() {
         // 返回按钮
         Button() {
-          Text('<')
-            .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
+          Image($r('app.media.last'))
+            .width(20)
+            .height(20)
+            .fillColor('#1A1F36')
         }
         .type(ButtonType.Normal)
         .width(40)
@@ -92,7 +91,6 @@ struct AIQuestionnaire {
         .backgroundColor('#F8F9FC')
         .borderRadius(8)
           .onClick(async () => {
-            console.info('[AIQuestionnaire] 返回按钮被点击');
             await this.handleBack();
           })
 
@@ -530,7 +528,13 @@ struct AIQuestionnaire {
   }
 
   // 下一题（带动画过渡）
-  private nextQuestion() {
+  private async nextQuestion() {
+    // 保存当前答案
+    if (this.selectedOptionId) {
+      const questionNumber = (this.currentQuestion + 1).toString();
+      this.answers[questionNumber] = this.selectedOptionId;
+    }
+    
     if (this.currentQuestion < 2) {
       // 添加淡出动画
       animateTo({
@@ -549,11 +553,26 @@ struct AIQuestionnaire {
         // 内容已更新
       });
     } else {
-      // 完成问卷，跳转到AI推荐页
-      RouterService.getInstance().navigateTo('pages/AIRecommendation', undefined, true)
-        .catch((err: Error) => {
-        console.error(`跳转失败: ${err.message}`);
-      });
+      // 完成问卷，提交答案并跳转到AI推荐页
+      try {
+        const response = await this.aiService.submitQuiz(this.answers);
+        console.info(`[AIQuestionnaire] 问卷提交成功，会话ID: ${response.sessionId}`);
+        
+        // 将会话ID传递给推荐页面
+        const params: RouteParams = {} as RouteParams;
+        params['quizSessionId'] = response.sessionId;
+        RouterService.getInstance().navigateTo('pages/AIRecommendation', params, true)
+          .catch((err: Error) => {
+          console.error(`跳转失败: ${err.message}`);
+        });
+      } catch (error) {
+        console.error(`[AIQuestionnaire] 提交问卷失败: ${error.message}`);
+        // 即使提交失败，也跳转到推荐页面（可以显示默认推荐）
+        RouterService.getInstance().navigateTo('pages/AIRecommendation', undefined, true)
+          .catch((err: Error) => {
+          console.error(`跳转失败: ${err.message}`);
+        });
+      }
     }
   }
 

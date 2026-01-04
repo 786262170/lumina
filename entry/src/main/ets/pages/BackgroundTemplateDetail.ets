@@ -61,7 +61,7 @@ struct BackgroundTemplateDetail {
   build() {
     Column() {
       // 顶部导航栏
-      TopNavBar({ title: this.templateTitle || '模板详情', showBack: true })
+      TopNavBar({ title: this.templateTitle || '模板详情', showBack: true, goBackToIndex: false })
 
       // 内容区域
       Scroll() {

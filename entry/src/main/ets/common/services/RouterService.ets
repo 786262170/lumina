@@ -18,7 +18,6 @@ export type Route =
   | 'pages/AIRecommendation'
   | 'pages/Index'
   | 'pages/BackgroundTemplates'
-  | 'pages/Workbench'
   | 'pages/BatchProcess'
   | 'pages/ProcessResult'
   | 'pages/MyWorks'
@@ -57,7 +56,6 @@ const HIDE_TAB_BAR_ROUTES: Route[] = [
   'pages/Login',
   'pages/AIQuestionnaire',
   'pages/AIRecommendation',
-  'pages/Workbench',
   'pages/BatchProcess',
   'pages/ScenarioDetail',
   'pages/ProcessResult',
@@ -380,8 +378,6 @@ export class RouterService {
         return '背景模板';
       case 'pages/BackgroundTemplateDetail':
         return '模板详情';
-      case 'pages/Workbench':
-        return '工作台';
       case 'pages/BatchProcess':
         return '批量处理';
       case 'pages/ProcessResult':

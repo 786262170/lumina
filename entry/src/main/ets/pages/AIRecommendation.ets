@@ -1,5 +1,6 @@
 import router from '@ohos.router';
 import { RouterService } from '../common/services/RouterService';
+import { AIService } from '../common/services/AIService';
 import { RecommendationItem } from '../common/types/CommonTypes';
 import { TopNavBar } from '../common/components/TopNavBar';
 
@@ -65,21 +66,80 @@ struct AIRecommendation {
     }
   ];
 
-  // 返回上一页
+  // 会话ID（从问卷页面传递）
+  @State quizSessionId: string = '';
+  
+  private aiService: AIService = AIService.getInstance();
+
+  aboutToAppear() {
+    // 获取路由参数
+    const params = router.getParams() as Record<string, Object>;
+    if (params && params['quizSessionId']) {
+      this.quizSessionId = params['quizSessionId'] as string;
+    }
+    
+    // 加载AI推荐
+    this.loadRecommendations();
+  }
+
+  // 加载AI推荐
+  async loadRecommendations() {
+    try {
+      const recommendations = await this.aiService.getRecommendations(this.quizSessionId || undefined);
+      console.info(`[AIRecommendation] 成功加载AI推荐，主要推荐: ${recommendations.primaryRecommendation.sceneName}`);
+      
+      // 更新推荐场景
+      this.recommendedScenario = {
+        title: recommendations.primaryRecommendation.sceneName,
+        subtitle: recommendations.primaryRecommendation.description,
+        icon: $r('app.media.startIcon')
+      };
+      
+      // 更新推荐功能列表
+      const recommendedFeaturesList: RecommendedFeature[] = [];
+      for (let i = 0; i < recommendations.recommendedFeatures.length; i++) {
+        const feature = recommendations.recommendedFeatures[i];
+        const recommendedFeature: RecommendedFeature = {
+          id: feature.id,
+          title: feature.name,
+          description: feature.description,
+          icon: $r('app.media.startIcon'),
+          selected: true
+        };
+        recommendedFeaturesList.push(recommendedFeature);
+      }
+      this.recommendedFeatures = recommendedFeaturesList;
+      
+      // 更新备选方案列表
+      const alternativeSolutionsList: AlternativeSolution[] = [];
+      for (let i = 0; i < recommendations.alternatives.length; i++) {
+        const alt = recommendations.alternatives[i];
+        const alternativeSolution: AlternativeSolution = {
+          id: alt.sceneType,
+          title: alt.sceneName,
+          matchPercent: alt.matchPercentage,
+          icon: $r('app.media.startIcon')
+        };
+        alternativeSolutionsList.push(alternativeSolution);
+      }
+      this.alternativeSolutions = alternativeSolutionsList;
+      
+      // 更新匹配度
+      this.matchScore = recommendations.primaryRecommendation.matchPercentage;
+    } catch (error) {
+      console.error(`[AIRecommendation] 加载AI推荐失败: ${error.message}`);
+      // 如果加载失败，使用默认推荐数据（不影响页面显示）
+    }
+  }
+
+  // 返回首页
   async handleBack() {
     console.info('[AIRecommendation] handleBack 被调用');
     try {
-      await RouterService.getInstance().goBack();
+      await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err);
-      console.error(`[AIRecommendation] 返回失败: ${errorMsg}`);
-      // 如果无法返回，则返回到首页
-      try {
-        await RouterService.getInstance().navigateTo('pages/Index', undefined, true);
-      } catch (error) {
-        const navErrorMsg = error instanceof Error ? error.message : String(error);
-        console.error(`[AIRecommendation] 跳转首页失败: ${navErrorMsg}`);
-      }
+      console.error(`[AIRecommendation] 跳转首页失败: ${errorMsg}`);
     }
   }
 
@@ -146,19 +206,17 @@ struct AIRecommendation {
           Row() {
             // 返回按钮
             Button() {
-              Text('<')
-                .fontSize(20)
-                .fontWeight(FontWeight.Medium)
-                .fontColor('#FFFFFF')
+              Image($r('app.media.last'))
+                .width(20)
+                .height(20)
+                .fillColor('#FFFFFF')
             }
             .type(ButtonType.Normal)
             .width(40)
             .height(40)
-            .backgroundColor('#FFFFFF')
-            .opacity(0.2)
+            .backgroundColor('rgba(255, 255, 255, 0.2)')
             .borderRadius(8)
             .onClick(async () => {
-              console.info('[AIRecommendation] 返回按钮被点击');
               await this.handleBack();
             })
 
