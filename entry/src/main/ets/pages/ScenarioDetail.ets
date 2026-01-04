@@ -928,35 +928,157 @@ struct ScenarioDetail {
           
           // 如果不是媒体库文件，尝试直接路径读取
           if (!fileBuffer) {
-            const pathVariants: string[] = [
-              this.selectedImageUri.replace('file://', ''),
-              this.selectedImageUri.replace('file:///', '/'),
-              this.selectedImageUri.replace('file://', '/'),
-            ];
-            
-            let readSuccess = false;
-            for (let j = 0; j < pathVariants.length; j++) {
-              const tryPath = pathVariants[j];
+            // 处理 file://docs/ 路径（文件选择器返回的URI）
+            if (this.selectedImageUri.startsWith('file://docs/')) {
               try {
-                console.info(`[ScenarioDetail] 尝试路径: ${tryPath}`);
-                const file = fs.openSync(tryPath, fs.OpenMode.READ_ONLY);
-                const stat = fs.statSync(tryPath);
-                const fileSize = stat.size;
-                fileBuffer = new ArrayBuffer(fileSize);
-                fs.readSync(file.fd, fileBuffer);
-                fs.closeSync(file);
-                fileName = tryPath.split('/').pop() || 'image.jpg';
-                console.info(`[ScenarioDetail] 成功读取文件: ${fileName}, 大小: ${fileSize}`);
-                readSuccess = true;
-                break;
-              } catch (tryError) {
-                console.info(`[ScenarioDetail] 路径 ${tryPath} 失败: ${tryError}`);
+                console.info(`[ScenarioDetail] 检测到文件选择器URI: ${this.selectedImageUri}`);
+                
+                // 方法1: 直接使用 URI 尝试读取（不转换路径）
+                let readSuccess = false;
+                
+                // 尝试多种路径格式
+                const uriVariants: string[] = [
+                  this.selectedImageUri, // 原始 URI
+                  this.selectedImageUri.replace('file://docs/', 'file://docs/storage/'), // 尝试添加 storage
+                ];
+                
+                // 优先尝试使用 fileIo.open() 异步方法（支持 URI）
+                for (let i = 0; i < uriVariants.length; i++) {
+                  const tryUri = uriVariants[i];
+                  try {
+                    console.info(`[ScenarioDetail] 尝试使用 fileIo.open() 读取 URI: ${tryUri}`);
+                    const fd: number = await fileIo.open(tryUri, 0); // 0 = O_RDONLY
+                    const stat: fileIo.Stat = await fileIo.stat(tryUri);
+                    const fileSize: number = stat.size;
+                    fileBuffer = new ArrayBuffer(fileSize);
+                    await fileIo.read(fd, fileBuffer);
+                    await fileIo.close(fd);
+                    fileName = tryUri.split('/').pop() || 'image.jpg';
+                    try {
+                      fileName = decodeURIComponent(fileName);
+                    } catch (e) {
+                      // 如果解码失败，使用原文件名
+                    }
+                    console.info(`[ScenarioDetail] 通过 fileIo.open() 成功读取文件: ${fileName}, 大小: ${fileSize}`);
+                    readSuccess = true;
+                    break;
+                  } catch (fileIoError) {
+                    console.info(`[ScenarioDetail] fileIo.open() 失败 (${tryUri}): ${fileIoError}`);
+                  }
+                }
+                
+                if (!readSuccess) {
+                  // 方法2: 尝试使用 fs.openSync() 同步方法
+                  for (let i = 0; i < uriVariants.length; i++) {
+                    const tryUri = uriVariants[i];
+                    try {
+                      console.info(`[ScenarioDetail] 尝试使用 fs.openSync() 读取 URI: ${tryUri}`);
+                      const file = fs.openSync(tryUri, fs.OpenMode.READ_ONLY);
+                      const stat = fs.statSync(tryUri);
+                      const fileSize = stat.size;
+                      fileBuffer = new ArrayBuffer(fileSize);
+                      fs.readSync(file.fd, fileBuffer);
+                      fs.closeSync(file);
+                      fileName = tryUri.split('/').pop() || 'image.jpg';
+                      try {
+                        fileName = decodeURIComponent(fileName);
+                      } catch (e) {
+                        // 如果解码失败，使用原文件名
+                      }
+                      console.info(`[ScenarioDetail] 通过 fs.openSync() 成功读取文件: ${fileName}, 大小: ${fileSize}`);
+                      readSuccess = true;
+                      break;
+                    } catch (fsError) {
+                      console.info(`[ScenarioDetail] fs.openSync() 失败 (${tryUri}): ${fsError}`);
+                    }
+                  }
+                }
+                
+                if (!readSuccess) {
+                  // 方法3: 尝试路径转换（移除 file:// 前缀）
+                  const pathVariants: string[] = [
+                    this.selectedImageUri.replace('file://', ''),
+                    this.selectedImageUri.replace('file://docs/', '/'),
+                    this.selectedImageUri.replace('file://docs/storage/', '/'),
+                  ];
+                  
+                  for (let i = 0; i < pathVariants.length; i++) {
+                    const tryPath = pathVariants[i];
+                    try {
+                      console.info(`[ScenarioDetail] 尝试转换后的路径: ${tryPath}`);
+                      const file = fs.openSync(tryPath, fs.OpenMode.READ_ONLY);
+                      const stat = fs.statSync(tryPath);
+                      const fileSize = stat.size;
+                      fileBuffer = new ArrayBuffer(fileSize);
+                      fs.readSync(file.fd, fileBuffer);
+                      fs.closeSync(file);
+                      fileName = tryPath.split('/').pop() || 'image.jpg';
+                      try {
+                        fileName = decodeURIComponent(fileName);
+                      } catch (e) {
+                        // 如果解码失败，使用原文件名
+                      }
+                      console.info(`[ScenarioDetail] 通过路径转换成功读取文件: ${fileName}, 大小: ${fileSize}`);
+                      readSuccess = true;
+                      break;
+                    } catch (pathError) {
+                      console.info(`[ScenarioDetail] 路径 ${tryPath} 失败: ${pathError}`);
+                    }
+                  }
+                }
+                
+                if (!readSuccess) {
+                  // 所有方法都失败，说明文件选择器返回的 URI 无法直接访问
+                  // 这是 HarmonyOS 系统的限制，文件选择器返回的 URI 可能需要特殊权限或处理
+                  console.error(`[ScenarioDetail] 所有读取方法都失败，文件选择器 URI 可能无法直接访问`);
+                  throw new Error(`无法读取文件选择器选择的文件。这是 HarmonyOS 系统的限制。建议：\n1. 使用相机拍摄新图片\n2. 将图片保存到应用可访问的目录后再选择\n3. 使用其他图片选择方式`);
+                }
+                
+                if (!readSuccess || !fileBuffer) {
+                  throw new Error(`无法读取文件选择器选择的文件。请尝试重新选择图片，或使用其他方式选择图片`);
+                }
+              } catch (docsError) {
+                console.error(`[ScenarioDetail] 读取文件选择器URI失败: ${docsError}`);
+                throw new Error(`无法读取文件选择器选择的文件。请尝试重新选择图片，或使用其他方式选择图片`);
               }
-            }
-            
-            if (!readSuccess || !fileBuffer) {
-              // 所有路径都失败，提示用户
-              throw new Error(`无法读取文件: ${this.selectedImageUri}，请检查文件权限或使用其他方式选择图片`);
+            } else {
+              // 处理其他路径格式
+              const pathVariants: string[] = [
+                this.selectedImageUri.replace('file://', ''),
+                this.selectedImageUri.replace('file:///', '/'),
+                this.selectedImageUri.replace('file://', '/'),
+              ];
+              
+              let readSuccess = false;
+              for (let j = 0; j < pathVariants.length; j++) {
+                const tryPath = pathVariants[j];
+                try {
+                  console.info(`[ScenarioDetail] 尝试路径: ${tryPath}`);
+                  const file = fs.openSync(tryPath, fs.OpenMode.READ_ONLY);
+                  const stat = fs.statSync(tryPath);
+                  const fileSize = stat.size;
+                  fileBuffer = new ArrayBuffer(fileSize);
+                  fs.readSync(file.fd, fileBuffer);
+                  fs.closeSync(file);
+                  fileName = tryPath.split('/').pop() || 'image.jpg';
+                  // 解码文件名
+                  try {
+                    fileName = decodeURIComponent(fileName);
+                  } catch (e) {
+                    // 如果解码失败，使用原文件名
+                  }
+                  console.info(`[ScenarioDetail] 成功读取文件: ${fileName}, 大小: ${fileSize}`);
+                  readSuccess = true;
+                  break;
+                } catch (tryError) {
+                  console.info(`[ScenarioDetail] 路径 ${tryPath} 失败: ${tryError}`);
+                }
+              }
+              
+              if (!readSuccess || !fileBuffer) {
+                // 所有路径都失败，提示用户
+                throw new Error(`无法读取文件: ${this.selectedImageUri}，请检查文件权限或使用其他方式选择图片`);
+              }
             }
           }
           

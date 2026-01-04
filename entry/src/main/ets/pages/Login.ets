@@ -207,18 +207,26 @@ struct Login {
     Column() {
       // Logo和品牌区域
       Column() {
-        // Logo图标（使用渐变圆形背景）
+        // Logo图标（使用PNG图片）
         Stack() {
           // 使用带圆角的容器作为圆形背景
           Column()
             .width(80)
             .height(80)
             .borderRadius(40)
-            .backgroundColor('#8B5CF6')
-            .opacity(0.8)
-          Image($r('app.media.startIcon'))
+            .linearGradient({
+              angle: 135,
+              colors: [
+                ['#667eea', 0.0],
+                ['#764ba2', 1.0]
+              ]
+            })
+          
+          // 使用PNG图片作为logo
+          Image($r('app.media.lumina_logo'))
             .width(50)
             .height(50)
+            .objectFit(ImageFit.Contain)
         }
         .width(80)
         .height(80)
@@ -459,9 +467,9 @@ struct Login {
       // 微信登录按钮
       Button() {
         Row() {
-          Image($r('app.media.startIcon'))
-            .width(24)
-            .height(24)
+          // 微信图标（使用文字符号，实际应该使用微信官方图标）
+          Text('💬')
+            .fontSize(20)
             .margin({ right: 12 })
           Text($r('app.string.wechat_quick_login'))
             .fontSize(16)

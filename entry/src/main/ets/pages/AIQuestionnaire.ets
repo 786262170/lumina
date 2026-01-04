@@ -2,6 +2,8 @@ import router from '@ohos.router';
 import { RouterService, RouteParams } from '../common/services/RouterService';
 import { AIService } from '../common/services/AIService';
 import { ProductOption, Question } from '../common/types/CommonTypes';
+import { IconComponent, IconType } from '../common/components/IconComponent';
+import { ToastUtil } from '../common/utils/ToastUtil';
 
 @Entry
 @Component
@@ -10,6 +12,8 @@ struct AIQuestionnaire {
   @State currentQuestion: number = 0;
   // 当前选中的选项ID
   @State selectedOptionId: string = '';
+  // 提交问卷时的加载状态
+  @State isSubmitting: boolean = false;
   
   // 问题列表
   private questions: Question[] = [
@@ -51,12 +55,58 @@ struct AIQuestionnaire {
     }
   ];
 
-  // Canvas上下文设置
-  private bagSettings: RenderingContextSettings = new RenderingContextSettings(true);
-  private bagContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.bagSettings);
-  
-  private iconSettings: RenderingContextSettings = new RenderingContextSettings(true);
-  private iconContext: CanvasRenderingContext2D = new CanvasRenderingContext2D(this.iconSettings);
+  // 将选项图标字符串映射到IconType
+  private getIconType(iconString: string, optionId?: string): IconType {
+    // 如果是平台选项，根据optionId返回不同的平台图标
+    if (iconString === 'platform' && optionId) {
+      switch (optionId) {
+        case 'taobao':
+          return IconType.TAOBAO;
+        case 'tmall':
+          return IconType.TMALL;
+        case 'jd':
+          return IconType.JD;
+        case 'douyin':
+          return IconType.DOUYIN;
+        case 'xiaohongshu':
+          return IconType.XIAOHONGSHU;
+        case 'amazon':
+          return IconType.AMAZON;
+        default:
+          return IconType.PLATFORM;
+      }
+    }
+    
+    // 其他选项图标
+    switch (iconString) {
+      case 'bag':
+        return IconType.BAG;
+      case 'phone':
+        return IconType.PHONE;
+      case 'cosmetic':
+        return IconType.COSMETIC;
+      case 'food':
+        return IconType.FOOD;
+      case 'home':
+        return IconType.HOME;
+      case 'sports':
+        return IconType.SPORTS;
+      case 'book':
+        return IconType.BOOK;
+      case 'other':
+        return IconType.OTHER;
+      case 'platform':
+        return IconType.PLATFORM;
+      case 'simple':
+        return IconType.SIMPLE;
+      case 'professional':
+        return IconType.PROFESSIONAL;
+      case 'creative':
+        return IconType.CREATIVE;
+      default:
+        return IconType.OTHER;
+    }
+  }
   
   // 答案记录
   @State answers: Record<string, string> = {};
@@ -136,25 +186,8 @@ struct AIQuestionnaire {
                 ]
               })
 
-            // 根据当前问题显示不同图标
-            Canvas(this.bagContext)
-              .width(60)
-              .height(60)
-              .key(`center-icon-${this.currentQuestion}`)
-              .onReady(() => {
-                // 清空画布
-                this.bagContext.clearRect(0, 0, 60, 60);
-                if (this.currentQuestion === 0) {
-                  // 第一个问题：购物袋
-                  this.drawBagIcon(this.bagContext, 30, 30);
-                } else if (this.currentQuestion === 1) {
-                  // 第二个问题：平台图标（可以用购物袋或平台图标）
-                  this.drawBagIcon(this.bagContext, 30, 30);
-                } else {
-                  // 第三个问题：四角星+sparkles
-                  this.drawStarWithSparkles(this.bagContext, 30, 30);
-                }
-              })
+            // 使用问卷页面主图标
+            IconComponent({ iconType: IconType.QUESTIONNAIRE, iconSize: 60, iconColor: '#FFFFFF' })
           }
           .width(120)
           .height(120)
@@ -190,13 +223,12 @@ struct AIQuestionnaire {
                     .borderRadius(8)
                     .backgroundColor(this.selectedOptionId === option.id ? '#7C3AED' : '#F3F4F6')
 
-                  // 图标内容
-                  Canvas(this.iconContext)
-                    .width(24)
-                    .height(24)
-                    .onReady(() => {
-                      this.drawOptionIcon(this.iconContext, 12, 12, option.icon, this.selectedOptionId === option.id);
-                    })
+                  // 图标内容（使用PNG图标）
+                  IconComponent({
+                    iconType: this.getIconType(option.icon, option.id),
+                    iconSize: 24,
+                    iconColor: this.selectedOptionId === option.id ? '#FFFFFF' : '#6B7280'
+                  })
                 }
                 .width(40)
                 .height(40)
@@ -258,10 +290,25 @@ struct AIQuestionnaire {
       Column() {
         // 下一步按钮
         Button() {
-          Text('下一步')
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#FFFFFF')
+          if (this.isSubmitting) {
+            Row() {
+              LoadingProgress()
+                .width(20)
+                .height(20)
+                .color('#FFFFFF')
+                .margin({ right: 8 })
+              Text('提交中...')
+                .fontSize(18)
+                .fontWeight(FontWeight.Medium)
+                .fontColor('#FFFFFF')
+            }
+            .justifyContent(FlexAlign.Center)
+          } else {
+            Text(this.currentQuestion < 2 ? '下一步' : '完成')
+              .fontSize(18)
+              .fontWeight(FontWeight.Medium)
+              .fontColor('#FFFFFF')
+          }
         }
         .type(ButtonType.Normal)
         .width('100%')
@@ -274,8 +321,8 @@ struct AIQuestionnaire {
             ['#764ba2', 1.0]
           ]
         })
-        .enabled(this.selectedOptionId !== '')
-        .opacity(this.selectedOptionId !== '' ? 1 : 0.5)
+        .enabled(this.selectedOptionId !== '' && !this.isSubmitting)
+        .opacity(this.selectedOptionId !== '' && !this.isSubmitting ? 1 : 0.5)
         .onClick(() => {
           this.nextQuestion();
         })
@@ -305,227 +352,6 @@ struct AIQuestionnaire {
     .backgroundColor('#FFFFFF')
   }
 
-  // 绘制购物袋图标
-  private drawBagIcon(context: CanvasRenderingContext2D, centerX: number, centerY: number) {
-    context.strokeStyle = '#FFFFFF';
-    context.lineWidth = 3;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    
-    // 绘制购物袋主体
-    context.beginPath();
-    // 顶部提手
-    context.moveTo(centerX - 12, centerY - 8);
-    context.quadraticCurveTo(centerX - 12, centerY - 12, centerX - 8, centerY - 12);
-    context.lineTo(centerX + 8, centerY - 12);
-    context.quadraticCurveTo(centerX + 12, centerY - 12, centerX + 12, centerY - 8);
-    
-    // 袋身
-    context.lineTo(centerX + 12, centerY + 12);
-    context.lineTo(centerX - 12, centerY + 12);
-    context.closePath();
-    context.stroke();
-    
-    // 底部横线
-    context.beginPath();
-    context.moveTo(centerX - 8, centerY + 12);
-    context.lineTo(centerX + 8, centerY + 12);
-    context.stroke();
-  }
-
-  // 绘制选项图标
-  private drawOptionIcon(context: CanvasRenderingContext2D, centerX: number, centerY: number, iconType: string, isSelected: boolean) {
-    context.strokeStyle = isSelected ? '#FFFFFF' : '#6B7280';
-    context.fillStyle = isSelected ? '#FFFFFF' : '#6B7280';
-    context.lineWidth = 2;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    
-    switch (iconType) {
-      case 'bag':
-        // 购物袋
-        this.drawBagIcon(context, centerX, centerY);
-        break;
-      case 'phone':
-        // 手机
-        context.strokeRect(centerX - 6, centerY - 8, 12, 16);
-        context.fillRect(centerX - 4, centerY - 6, 8, 2);
-        break;
-      case 'cosmetic':
-        // 化妆品（圆形）
-        context.beginPath();
-        context.arc(centerX, centerY, 6, 0, Math.PI * 2);
-        context.stroke();
-        break;
-      case 'food':
-        // 食物（圆形带点）
-        context.beginPath();
-        context.arc(centerX, centerY, 6, 0, Math.PI * 2);
-        context.fill();
-        break;
-      case 'home':
-        // 家居（房子）
-        context.beginPath();
-        context.moveTo(centerX, centerY - 8);
-        context.lineTo(centerX - 6, centerY);
-        context.lineTo(centerX - 6, centerY + 6);
-        context.lineTo(centerX + 6, centerY + 6);
-        context.lineTo(centerX + 6, centerY);
-        context.closePath();
-        context.stroke();
-        break;
-      case 'sports':
-        // 运动（圆形）
-        context.beginPath();
-        context.arc(centerX, centerY, 6, 0, Math.PI * 2);
-        context.stroke();
-        break;
-      case 'book':
-        // 书本
-        context.strokeRect(centerX - 6, centerY - 4, 12, 8);
-        context.beginPath();
-        context.moveTo(centerX, centerY - 4);
-        context.lineTo(centerX, centerY + 4);
-        context.stroke();
-        break;
-      case 'magic':
-        // 魔法棒（星形）
-        this.drawStar(context, centerX, centerY, 6);
-        break;
-      case 'batch':
-        // 批量（多个方块）
-        context.fillRect(centerX - 6, centerY - 4, 4, 4);
-        context.fillRect(centerX - 1, centerY - 4, 4, 4);
-        context.fillRect(centerX - 6, centerY + 1, 4, 4);
-        context.fillRect(centerX - 1, centerY + 1, 4, 4);
-        break;
-      case 'template':
-        // 模板（网格）
-        context.strokeRect(centerX - 6, centerY - 6, 12, 12);
-        context.beginPath();
-        context.moveTo(centerX, centerY - 6);
-        context.lineTo(centerX, centerY + 6);
-        context.moveTo(centerX - 6, centerY);
-        context.lineTo(centerX + 6, centerY);
-        context.stroke();
-        break;
-      case 'enhance':
-        // 优化（向上箭头）
-        context.beginPath();
-        context.moveTo(centerX, centerY - 6);
-        context.lineTo(centerX - 4, centerY);
-        context.lineTo(centerX + 4, centerY);
-        context.closePath();
-        context.fill();
-        break;
-      case 'simple':
-        // 简约现代（简洁线条）
-        context.beginPath();
-        context.moveTo(centerX - 6, centerY);
-        context.lineTo(centerX - 2, centerY - 4);
-        context.lineTo(centerX + 2, centerY - 4);
-        context.lineTo(centerX + 6, centerY);
-        context.lineTo(centerX + 2, centerY + 4);
-        context.lineTo(centerX - 2, centerY + 4);
-        context.closePath();
-        context.stroke();
-        break;
-      case 'professional':
-        // 专业商务（方形）
-        context.strokeRect(centerX - 6, centerY - 6, 12, 12);
-        context.beginPath();
-        context.moveTo(centerX - 6, centerY);
-        context.lineTo(centerX + 6, centerY);
-        context.moveTo(centerX, centerY - 6);
-        context.lineTo(centerX, centerY + 6);
-        context.stroke();
-        break;
-      case 'creative':
-        // 创意个性（星形+sparkles）
-        this.drawStar(context, centerX, centerY, 6);
-        // 添加小sparkles
-        context.fillRect(centerX - 8, centerY - 2, 2, 2);
-        context.fillRect(centerX + 6, centerY - 2, 2, 2);
-        break;
-      default:
-        // 默认图标（圆形）
-        context.beginPath();
-        context.arc(centerX, centerY, 6, 0, Math.PI * 2);
-        context.stroke();
-    }
-  }
-
-  // 绘制星形
-  private drawStar(context: CanvasRenderingContext2D, centerX: number, centerY: number, radius: number) {
-    const spikes = 5;
-    const outerRadius = radius;
-    const innerRadius = radius * 0.4;
-    
-    context.beginPath();
-    for (let i = 0; i < spikes * 2; i++) {
-      const angle = (i * Math.PI) / spikes - Math.PI / 2;
-      const r = i % 2 === 0 ? outerRadius : innerRadius;
-      const x = centerX + r * Math.cos(angle);
-      const y = centerY + r * Math.sin(angle);
-      
-      if (i === 0) {
-        context.moveTo(x, y);
-      } else {
-        context.lineTo(x, y);
-      }
-    }
-    context.closePath();
-    context.fill();
-  }
-
-  // 绘制四角星+sparkles（用于第三个问题的中央图标）
-  private drawStarWithSparkles(context: CanvasRenderingContext2D, centerX: number, centerY: number) {
-    context.strokeStyle = '#FFFFFF';
-    context.fillStyle = '#FFFFFF';
-    context.lineWidth = 3;
-    context.lineCap = 'round';
-    context.lineJoin = 'round';
-    
-    // 绘制四角星（十字星形）
-    const size = 20;
-    context.beginPath();
-    // 上
-    context.moveTo(centerX, centerY - size);
-    context.lineTo(centerX, centerY - size / 2);
-    // 右
-    context.moveTo(centerX + size, centerY);
-    context.lineTo(centerX + size / 2, centerY);
-    // 下
-    context.moveTo(centerX, centerY + size);
-    context.lineTo(centerX, centerY + size / 2);
-    // 左
-    context.moveTo(centerX - size, centerY);
-    context.lineTo(centerX - size / 2, centerY);
-    // 连接中心
-    context.moveTo(centerX - size / 2, centerY);
-    context.lineTo(centerX + size / 2, centerY);
-    context.moveTo(centerX, centerY - size / 2);
-    context.lineTo(centerX, centerY + size / 2);
-    context.stroke();
-    
-    // 绘制两个小加号（sparkles）
-    const sparkleSize = 4;
-    // 左上sparkle
-    context.beginPath();
-    context.moveTo(centerX - 16, centerY - 16);
-    context.lineTo(centerX - 16, centerY - 16 + sparkleSize);
-    context.moveTo(centerX - 16 - sparkleSize / 2, centerY - 16 + sparkleSize / 2);
-    context.lineTo(centerX - 16 + sparkleSize / 2, centerY - 16 + sparkleSize / 2);
-    context.stroke();
-    
-    // 右下sparkle
-    context.beginPath();
-    context.moveTo(centerX + 16, centerY + 16);
-    context.lineTo(centerX + 16, centerY + 16 - sparkleSize);
-    context.moveTo(centerX + 16 - sparkleSize / 2, centerY + 16 - sparkleSize / 2);
-    context.lineTo(centerX + 16 + sparkleSize / 2, centerY + 16 - sparkleSize / 2);
-    context.stroke();
-  }
 
   // 下一题（带动画过渡）
   private async nextQuestion() {
@@ -554,24 +380,28 @@ struct AIQuestionnaire {
       });
     } else {
       // 完成问卷，提交答案并跳转到AI推荐页
+      this.isSubmitting = true;
       try {
+        console.info(`[AIQuestionnaire] 开始提交问卷，答案:`, this.answers);
         const response = await this.aiService.submitQuiz(this.answers);
         console.info(`[AIQuestionnaire] 问卷提交成功，会话ID: ${response.sessionId}`);
         
         // 将会话ID传递给推荐页面
         const params: RouteParams = {} as RouteParams;
         params['quizSessionId'] = response.sessionId;
-        RouterService.getInstance().navigateTo('pages/AIRecommendation', params, true)
-          .catch((err: Error) => {
-          console.error(`跳转失败: ${err.message}`);
-        });
+        await RouterService.getInstance().navigateTo('pages/AIRecommendation', params, true);
       } catch (error) {
-        console.error(`[AIQuestionnaire] 提交问卷失败: ${error.message}`);
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        console.error(`[AIQuestionnaire] 提交问卷失败: ${errorMsg}`);
+        ToastUtil.showError(`提交问卷失败: ${errorMsg}`);
         // 即使提交失败，也跳转到推荐页面（可以显示默认推荐）
-        RouterService.getInstance().navigateTo('pages/AIRecommendation', undefined, true)
-          .catch((err: Error) => {
-          console.error(`跳转失败: ${err.message}`);
-        });
+        try {
+          await RouterService.getInstance().navigateTo('pages/AIRecommendation', undefined, true);
+        } catch (navError) {
+          console.error(`[AIQuestionnaire] 跳转失败: ${navError instanceof Error ? navError.message : String(navError)}`);
+        }
+      } finally {
+        this.isSubmitting = false;
       }
     }
   }

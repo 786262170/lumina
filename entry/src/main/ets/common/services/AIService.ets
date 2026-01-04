@@ -76,5 +76,30 @@ export class AIService {
     const params = quizSessionId ? `?quizSessionId=${quizSessionId}` : '';
     return this.apiClient.get<RecommendationsResponse>(`/ai/recommendations${params}`, false);
   }
+
+  /**
+   * 提交选中的推荐功能
+   */
+  async confirmRecommendation(request: RecommendationConfirmationRequest): Promise<RecommendationConfirmationResponse> {
+    return this.apiClient.post<RecommendationConfirmationResponse>('/ai/recommendations/confirm', request, false);
+  }
+}
+
+/**
+ * 推荐确认请求
+ */
+export interface RecommendationConfirmationRequest {
+  quizSessionId?: string;
+  sceneType: string;
+  selectedFeatureIds: string[];
+}
+
+/**
+ * 推荐确认响应
+ */
+export interface RecommendationConfirmationResponse {
+  success: boolean;
+  message: string;
+  redirectUrl?: string;
 }
 
