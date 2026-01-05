@@ -2,6 +2,7 @@ import { router } from '@kit.ArkUI';
 import { AuthService } from '../common/services/AuthService';
 import { UserService } from '../common/services/UserService';
 import { RouterService } from '../common/services/RouterService';
+import { LuminaColors, LuminaSpacing, LuminaRadius, LuminaTypography, LuminaLayout, LuminaSizes } from '../common/DesignSystem';
 
 @Entry
 @Component
@@ -190,14 +191,14 @@ struct Login {
         Stack() {
           // 使用带圆角的容器作为圆形背景
           Column()
-            .width(80)
-            .height(80)
-            .borderRadius(40)
+            .width(LuminaSizes.AVATAR_XL)
+            .height(LuminaSizes.AVATAR_XL)
+            .borderRadius(LuminaSizes.AVATAR_XL / 2)
             .linearGradient({
               angle: 135,
               colors: [
-                ['#667eea', 0.0],
-                ['#764ba2', 1.0]
+                [LuminaColors.PRIMARY_BLUE, 0.0],
+                [LuminaColors.SECONDARY_PURPLE, 1.0]
               ]
             })
           
@@ -207,41 +208,42 @@ struct Login {
             .height(50)
             .objectFit(ImageFit.Contain)
         }
-        .width(80)
-        .height(80)
-        .margin({ bottom: 16 })
+        .width(LuminaSizes.AVATAR_XL)
+        .height(LuminaSizes.AVATAR_XL)
+        .margin({ bottom: LuminaSpacing.MD })
 
         // 品牌名
         Text($r('app.string.app_name'))
-          .fontSize(32)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
-          .margin({ bottom: 8 })
+          .fontSize(LuminaTypography.DISPLAY_MD)
+          .fontWeight(LuminaTypography.WEIGHT_BOLD)
+          .fontColor(LuminaColors.TEXT_PRIMARY)
+          .margin({ bottom: LuminaSpacing.SM })
 
         // 标语
         Text($r('app.string.app_tagline'))
-          .fontSize(14)
-          .fontColor('#9CA3AF')
+          .fontSize(LuminaTypography.CAPTION)
+          .fontColor(LuminaColors.TEXT_SECONDARY)
           .margin({ bottom: 60 })
       }
       .width('100%')
       .margin({ top: 80 })
+      .alignItems(LuminaLayout.ALIGN_CENTER)
 
       // 欢迎文字
       Column() {
         Text($r('app.string.welcome_back'))
-          .fontSize(28)
-          .fontWeight(FontWeight.Bold)
-          .fontColor('#1F2937')
-          .margin({ bottom: 8 })
+          .fontSize(LuminaTypography.HEADLINE)
+          .fontWeight(LuminaTypography.WEIGHT_BOLD)
+          .fontColor(LuminaColors.TEXT_PRIMARY)
+          .margin({ bottom: LuminaSpacing.SM })
 
         Text($r('app.string.login_to_continue'))
-          .fontSize(14)
-          .fontColor('#9CA3AF')
+          .fontSize(LuminaTypography.CAPTION)
+          .fontColor(LuminaColors.TEXT_SECONDARY)
       }
       .width('100%')
-      .alignItems(HorizontalAlign.Start)
-      .padding({ left: 24, right: 24 })
+      .alignItems(LuminaLayout.ALIGN_START)
+      .padding({ left: LuminaLayout.PAGE_PADDING_H_LARGE, right: LuminaLayout.PAGE_PADDING_H_LARGE })
       .margin({ bottom: 40 })
 
       // 调试功能区域（开发环境显示）
@@ -249,46 +251,46 @@ struct Login {
         Row() {
           Button('快速填充测试账号')
             .type(ButtonType.Normal)
-            .fontSize(12)
+            .fontSize(LuminaTypography.LABEL)
             .fontColor('#3B82F6')
             .backgroundColor('#EFF6FF')
             .border({ width: 1, color: '#3B82F6' })
-            .borderRadius(6)
-            .height(32)
+            .borderRadius(LuminaRadius.SM)
+            .height(LuminaSizes.BUTTON_HEIGHT_SM)
             .onClick(() => {
               this.fillTestAccount();
             })
 
           Button('快速登录')
             .type(ButtonType.Normal)
-            .fontSize(12)
-            .fontColor('#10B981')
+            .fontSize(LuminaTypography.LABEL)
+            .fontColor(LuminaColors.SUCCESS)
             .backgroundColor('#ECFDF5')
-            .border({ width: 1, color: '#10B981' })
-            .borderRadius(6)
-            .height(32)
+            .border({ width: 1, color: LuminaColors.SUCCESS })
+            .borderRadius(LuminaRadius.SM)
+            .height(LuminaSizes.BUTTON_HEIGHT_SM)
             .onClick(() => {
               this.quickLogin();
             })
         }
         .width('100%')
         .justifyContent(FlexAlign.SpaceAround)
-        .margin({ bottom: 16 })
+        .margin({ bottom: LuminaSpacing.MD })
       }
       .width('100%')
-      .padding({ left: 24, right: 24 })
+      .padding({ left: LuminaLayout.PAGE_PADDING_H_LARGE, right: LuminaLayout.PAGE_PADDING_H_LARGE })
 
       // 错误提示
       if (this.errorMessage !== '') {
         Text(this.errorMessage)
-          .fontSize(14)
-          .fontColor('#EF4444')
+          .fontSize(LuminaTypography.CAPTION)
+          .fontColor(LuminaColors.ERROR)
           .width('100%')
-          .textAlign(TextAlign.Center)
-          .padding({ top: 8, bottom: 8 })
+          .textAlign(LuminaLayout.TEXT_ALIGN_CENTER)
+          .padding({ top: LuminaSpacing.SM, bottom: LuminaSpacing.SM })
           .backgroundColor('#FEE2E2')
-          .borderRadius(8)
-          .margin({ bottom: 16, left: 24, right: 24 })
+          .borderRadius(LuminaRadius.MD)
+          .margin({ bottom: LuminaSpacing.MD, left: LuminaLayout.PAGE_PADDING_H_LARGE, right: LuminaLayout.PAGE_PADDING_H_LARGE })
       }
 
       // 输入区域
@@ -296,18 +298,18 @@ struct Login {
         // 手机号输入
         Column() {
           Text($r('app.string.phone_number'))
-            .fontSize(14)
-            .fontColor('#374151')
+            .fontSize(LuminaTypography.CAPTION)
+            .fontColor(LuminaColors.TEXT_PRIMARY)
             .alignSelf(ItemAlign.Start)
-            .margin({ bottom: 8 })
+            .margin({ bottom: LuminaSpacing.SM })
 
           Row() {
             // 国家代码
             Text('+86')
-              .fontSize(16)
-              .fontColor('#6B7280')
-              .padding({ left: 16, right: 16 })
-              .border({ width: { right: 1 }, color: '#E5E7EB' })
+              .fontSize(LuminaTypography.BODY)
+              .fontColor(LuminaColors.TEXT_SECONDARY)
+              .padding({ left: LuminaSizes.INPUT_PADDING_H, right: LuminaSizes.INPUT_PADDING_H })
+              .border({ width: { right: 1 }, color: LuminaColors.BORDER })
 
             // 手机号输入框
             TextInput({ placeholder: $r('app.string.enter_phone_number'), text: this.phoneNumber })
@@ -315,9 +317,9 @@ struct Login {
               .type(InputType.PhoneNumber)
               .maxLength(11)
               .backgroundColor(Color.Transparent)
-              .fontSize(16)
-              .fontColor('#1F2937')
-              .padding({ left: 12, right: 12 })
+              .fontSize(LuminaTypography.BODY)
+              .fontColor(LuminaColors.TEXT_PRIMARY)
+              .padding({ left: LuminaSpacing.SM, right: LuminaSpacing.SM })
               .onChange((value: string) => {
                 this.phoneNumber = value;
                 this.validatePhoneNumber();
@@ -325,34 +327,34 @@ struct Login {
               })
           }
           .width('100%')
-          .height(48)
-          .borderRadius(8)
-          .border({ width: 1, color: '#E5E7EB' })
-          .backgroundColor('#FFFFFF')
+          .height(LuminaSizes.INPUT_HEIGHT)
+          .borderRadius(LuminaRadius.MD)
+          .border({ width: 1, color: this.phoneError ? LuminaColors.ERROR : LuminaColors.BORDER })
+          .backgroundColor(LuminaColors.BG_SURFACE)
         }
         .width('100%')
-        .margin({ bottom: 24 })
+        .margin({ bottom: LuminaLayout.SECTION_SPACING })
 
         // 验证码输入
         Column() {
           Row() {
             Text($r('app.string.verification_code'))
-              .fontSize(14)
-              .fontColor('#374151')
+              .fontSize(LuminaTypography.CAPTION)
+              .fontColor(LuminaColors.TEXT_PRIMARY)
               .layoutWeight(1)
 
             // 验证码提示（调试用）
             if (this.showCodeHint) {
               Text(`验证码: ${this.codeHint}`)
-                .fontSize(12)
-                .fontColor('#10B981')
+                .fontSize(LuminaTypography.LABEL)
+                .fontColor(LuminaColors.SUCCESS)
                 .backgroundColor('#ECFDF5')
-                .padding({ left: 8, right: 8, top: 4, bottom: 4 })
-                .borderRadius(4)
+                .padding({ left: LuminaSpacing.SM, right: LuminaSpacing.SM, top: LuminaSpacing.XS, bottom: LuminaSpacing.XS })
+                .borderRadius(LuminaRadius.SM)
             }
           }
           .width('100%')
-          .margin({ bottom: 8 })
+          .margin({ bottom: LuminaSpacing.SM })
 
           Row() {
             TextInput({ placeholder: $r('app.string.enter_verification_code'), text: this.verificationCode })
@@ -360,9 +362,9 @@ struct Login {
               .type(InputType.Normal)
               .maxLength(6)
               .backgroundColor(Color.Transparent)
-              .fontSize(16)
-              .fontColor('#1F2937')
-              .padding({ left: 16, right: 16 })
+              .fontSize(LuminaTypography.BODY)
+              .fontColor(LuminaColors.TEXT_PRIMARY)
+              .padding({ left: LuminaSizes.INPUT_PADDING_H, right: LuminaSizes.INPUT_PADDING_H })
               .onChange((value: string) => {
                 this.verificationCode = value;
                 this.validateVerificationCode();
@@ -371,13 +373,13 @@ struct Login {
 
             Button(this.countdown > 0 ? `${this.countdown}s` : $r('app.string.get_verification_code'))
               .type(ButtonType.Normal)
-              .fontSize(14)
-              .fontColor(this.countdown > 0 ? '#9CA3AF' : '#3B82F6')
-              .backgroundColor('#FFFFFF')
+              .fontSize(LuminaTypography.CAPTION)
+              .fontColor(this.countdown > 0 ? LuminaColors.TEXT_SECONDARY : '#3B82F6')
+              .backgroundColor(LuminaColors.BG_SURFACE)
               .enabled(this.countdown === 0 && this.phoneNumber.length === 11)
               .opacity(this.countdown > 0 || this.phoneNumber.length !== 11 ? 0.5 : 1)
               .border({ width: 1, color: '#3B82F6' })
-              .borderRadius(8)
+              .borderRadius(LuminaRadius.MD)
               .width(100)
               .height(36)
               .enabled(!this.isCodeButtonDisabled)
@@ -386,28 +388,28 @@ struct Login {
               })
           }
           .width('100%')
-          .height(48)
-          .borderRadius(8)
+          .height(LuminaSizes.INPUT_HEIGHT)
+          .borderRadius(LuminaRadius.MD)
           .border({ 
             width: 1, 
-            color: this.codeError ? '#EF4444' : '#E5E7EB' 
+            color: this.codeError ? LuminaColors.ERROR : LuminaColors.BORDER 
           })
-          .backgroundColor('#FFFFFF')
+          .backgroundColor(LuminaColors.BG_SURFACE)
 
           // 验证码错误提示
           if (this.codeError) {
             Text(this.codeError)
-              .fontSize(12)
-              .fontColor('#EF4444')
-              .margin({ top: 4 })
+              .fontSize(LuminaTypography.LABEL)
+              .fontColor(LuminaColors.ERROR)
+              .margin({ top: LuminaSpacing.XS })
               .width('100%')
           }
         }
         .width('100%')
-        .margin({ bottom: 32 })
+        .margin({ bottom: LuminaSpacing.XL })
       }
       .width('100%')
-      .padding({ left: 24, right: 24 })
+      .padding({ left: LuminaLayout.PAGE_PADDING_H_LARGE, right: LuminaLayout.PAGE_PADDING_H_LARGE })
 
       // 登录按钮
       Button() {
@@ -418,16 +420,16 @@ struct Login {
             .height(20)
         } else {
           Text($r('app.string.login'))
-            .fontSize(18)
-            .fontWeight(FontWeight.Medium)
+            .fontSize(LuminaTypography.TITLE)
+            .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
             .fontColor('#FFFFFF')
         }
       }
       .type(ButtonType.Normal)
       .width('100%')
-      .height(50)
-      .backgroundColor(this.isLoading || !this.isFormValid ? '#9CA3AF' : '#3B82F6')
-      .borderRadius(8)
+      .height(LuminaSizes.BUTTON_HEIGHT_LG)
+      .backgroundColor(this.isLoading || !this.isFormValid ? LuminaColors.TEXT_SECONDARY : '#3B82F6')
+      .borderRadius(LuminaRadius.MD)
       .enabled(!this.isLoading && this.isFormValid)
       .opacity(this.isLoading || !this.isFormValid ? 0.5 : 1)
       .onClick(() => {
@@ -435,17 +437,18 @@ struct Login {
           this.handleLogin();
         }
       })
-      .margin({ bottom: 24 })
+      .margin({ bottom: LuminaLayout.SECTION_SPACING })
+      .padding({ left: LuminaLayout.PAGE_PADDING_H_LARGE, right: LuminaLayout.PAGE_PADDING_H_LARGE })
 
       // 底部链接
       Row() {
         Text($r('app.string.no_account'))
-          .fontSize(14)
-          .fontColor('#6B7280')
-          .margin({ right: 8 })
+          .fontSize(LuminaTypography.CAPTION)
+          .fontColor(LuminaColors.TEXT_SECONDARY)
+          .margin({ right: LuminaSpacing.SM })
 
         Text($r('app.string.guest_mode'))
-          .fontSize(14)
+          .fontSize(LuminaTypography.CAPTION)
           .fontColor('#3B82F6')
           .onClick(() => {
             // 游客模式
@@ -458,7 +461,7 @@ struct Login {
     .width('100%')
     .height('100%')
     .backgroundColor('#F9FAFB')
-    .padding({ left: 24, right: 24 })
+    .padding({ left: LuminaLayout.PAGE_PADDING_H_LARGE, right: LuminaLayout.PAGE_PADDING_H_LARGE })
   }
 }
 

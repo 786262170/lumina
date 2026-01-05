@@ -7,6 +7,7 @@ import { SceneService } from '../common/services/SceneService';
 import { promptAction } from '@kit.ArkUI';
 import { ScenarioItem, RecentWork } from '../common/types/CommonTypes';
 import { TabBar } from '../common/components/TabBar';
+import { LuminaColors, LuminaSpacing, LuminaRadius, LuminaTypography, LuminaLayout, LuminaSizes } from '../common/DesignSystem';
 
 @Entry
 @Component
@@ -178,12 +179,12 @@ struct Index {
   build() {
     Column() {
       // 顶部导航栏
-        Row() {
+      Row() {
         // Logo
         Text('Lumina')
-          .fontSize(24)
-          .fontWeight(FontWeight.Medium)
-          .fontColor('#667eea')
+          .fontSize(LuminaTypography.TITLE)
+          .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+          .fontColor(LuminaColors.PRIMARY_BLUE)
           .letterSpacing(-0.02)
           .layoutWeight(1)
 
@@ -192,17 +193,17 @@ struct Index {
           // 用户头像
           Button() {
             Image($r('app.media.touxiang'))
-              .width(32)
-              .height(32)
-              .borderRadius(16)
+              .width(LuminaSizes.AVATAR_SM)
+              .height(LuminaSizes.AVATAR_SM)
+              .borderRadius(LuminaSizes.AVATAR_SM / 2)
               .objectFit(ImageFit.Cover)
           }
           .type(ButtonType.Circle)
-          .width(40)
-          .height(40)
-          .backgroundColor('#F8F9FC')
-          .margin({ left: 8 })
-              .onClick(() => {
+          .width(LuminaSizes.AVATAR_MD)
+          .height(LuminaSizes.AVATAR_MD)
+          .backgroundColor(LuminaColors.BG_PRIMARY)
+          .margin({ left: LuminaSpacing.SM })
+          .onClick(() => {
             // 可以跳转到个人中心或我的页面
             RouterService.getInstance().switchTab(3)
               .catch((err: Error) => {
@@ -213,27 +214,27 @@ struct Index {
           // 设置按钮
           Button() {
             Image($r('app.media.settings'))
-              .width(24)
-              .height(24)
+              .width(LuminaSizes.ICON_MD)
+              .height(LuminaSizes.ICON_MD)
           }
           .type(ButtonType.Circle)
-          .width(40)
-          .height(40)
-          .backgroundColor('#F8F9FC')
-          .margin({ left: 8 })
+          .width(LuminaSizes.AVATAR_MD)
+          .height(LuminaSizes.AVATAR_MD)
+          .backgroundColor(LuminaColors.BG_PRIMARY)
+          .margin({ left: LuminaSpacing.SM })
           .onClick(() => {
             RouterService.getInstance().navigateTo('pages/Settings')
               .catch((err: Error) => {
                 console.error(`跳转失败: ${err.message}`);
               });
-              })
-          }
+          })
         }
-        .width('100%')
-      .height(56)
-      .padding({ left: 16, right: 16 })
-      .backgroundColor('#FFFFFF')
-      .border({ width: { bottom: 1 }, color: '#E5E7EB' })
+      }
+      .width('100%')
+      .height(LuminaSizes.NAV_BAR_HEIGHT)
+      .padding({ left: LuminaLayout.PAGE_PADDING_H, right: LuminaLayout.PAGE_PADDING_H })
+      .backgroundColor(LuminaColors.BG_SURFACE)
+      .border({ width: { bottom: 1 }, color: LuminaColors.BORDER })
 
       // 主内容区域
       Scroll() {
@@ -241,26 +242,26 @@ struct Index {
           // 问候语区域
           Column() {
             Text('你好，' + (this.userInfo?.nickname || this.userInfo?.phone || '创作者'))
-              .fontSize(28)
-              .fontWeight(FontWeight.Medium)
-              .fontColor('#1A1F36')
-        .margin({ bottom: 8 })
+              .fontSize(LuminaTypography.HEADLINE)
+              .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+              .fontColor(LuminaColors.TEXT_PRIMARY)
+              .margin({ bottom: LuminaSpacing.SM })
 
-        Text($r('app.string.scenario_question'))
-          .fontSize(16)
-              .fontWeight(FontWeight.Regular)
-          .fontColor('#6B7280')
+            Text($r('app.string.scenario_question'))
+              .fontSize(LuminaTypography.BODY)
+              .fontWeight(LuminaTypography.WEIGHT_REGULAR)
+              .fontColor(LuminaColors.TEXT_SECONDARY)
           }
           .width('100%')
-          .alignItems(HorizontalAlign.Start)
-          .margin({ top: 20, bottom: 24 })
+          .alignItems(LuminaLayout.ALIGN_START)
+          .margin({ top: LuminaSpacing.MD, bottom: LuminaLayout.SECTION_SPACING })
 
         // 快速场景标题
         Text($r('app.string.quick_scenarios'))
-          .fontSize(20)
-            .fontWeight(FontWeight.Medium)
-            .fontColor('#1A1F36')
-          .margin({ bottom: 16 })
+          .fontSize(LuminaTypography.TITLE)
+          .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+          .fontColor(LuminaColors.TEXT_PRIMARY)
+          .margin({ bottom: LuminaSpacing.MD })
           .width('100%')
 
         // 场景网格
@@ -268,96 +269,96 @@ struct Index {
           ForEach(this.scenarios, (item: ScenarioItem) => {
             GridItem() {
               Column() {
-                  // 图标背景（渐变圆形，带渐变效果）
-                  Stack() {
-                    Circle({ width: 64, height: 64 })
-                      .fill(this.selectedSceneId === item.id ? '#F8F9FC' : '#F8F9FC')
-                      .opacity(this.selectedSceneId === item.id ? 1 : 0.8)
+                // 图标背景（渐变圆形，带渐变效果）
+                Stack() {
+                  Circle({ width: 64, height: 64 })
+                    .fill(this.selectedSceneId === item.id ? LuminaColors.BG_PRIMARY : LuminaColors.BG_PRIMARY)
+                    .opacity(this.selectedSceneId === item.id ? 1 : 0.8)
 
-                    // 渐变背景层（模拟渐变效果）
-                    Circle({ width: 64, height: 64 })
-                      .fill('#667eea')
-                      .opacity(0.1)
+                  // 渐变背景层（模拟渐变效果）
+                  Circle({ width: 64, height: 64 })
+                    .fill(LuminaColors.PRIMARY_BLUE)
+                    .opacity(0.1)
 
-                    // zhuanye图标作为装饰背景
-                    Image($r('app.media.zhuanye'))
-                      .width(40)
-                      .height(40)
-                      .objectFit(ImageFit.Contain)
-                      .opacity(0.15)
+                  // zhuanye图标作为装饰背景
+                  Image($r('app.media.zhuanye'))
+                    .width(40)
+                    .height(40)
+                    .objectFit(ImageFit.Contain)
+                    .opacity(0.15)
 
-                    // 图标（使用圆形裁剪，让方形图标匹配圆形轮廓）
-                Image(item.icon)
-                      .width(48)
-                      .height(48)
-                      .borderRadius(24)
-                      .objectFit(ImageFit.Cover)
-                  }
-                  .width(64)
-                  .height(64)
-                  .alignContent(Alignment.Center)
-                  .margin({ bottom: 12 })
+                  // 图标（使用圆形裁剪，让方形图标匹配圆形轮廓）
+                  Image(item.icon)
+                    .width(48)
+                    .height(48)
+                    .borderRadius(24)
+                    .objectFit(ImageFit.Cover)
+                }
+                .width(64)
+                .height(64)
+                .alignContent(Alignment.Center)
+                .margin({ bottom: LuminaSpacing.SM })
 
                 Text(item.title)
-                    .fontSize(16)
-                  .fontWeight(FontWeight.Medium)
-                    .fontColor('#1A1F36')
-                  .margin({ bottom: 4 })
+                  .fontSize(LuminaTypography.BODY)
+                  .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+                  .fontColor(LuminaColors.TEXT_PRIMARY)
+                  .margin({ bottom: LuminaSpacing.XS })
 
                 Text($r('app.string.one_click_generate'))
-                    .fontSize(14)
-                  .fontColor('#6B7280')
+                  .fontSize(LuminaTypography.CAPTION)
+                  .fontColor(LuminaColors.TEXT_SECONDARY)
               }
               .width('100%')
-                .height(144)
+              .height(144)
               .justifyContent(FlexAlign.Center)
-              .padding(16)
-                .borderRadius(16)
-                .border({
-                  width: this.selectedSceneId === item.id ? 2 : 2,
-                  color: this.selectedSceneId === item.id ? '#667eea' : '#E5E7EB'
-                })
-                .backgroundColor(this.selectedSceneId === item.id ? '#F8F9FC' : '#FFFFFF')
-                .shadow({
-                  radius: this.selectedSceneId === item.id ? 8 : 0,
-                  color: this.selectedSceneId === item.id ? '#667eea' : '#000000',
-                  offsetX: 0,
-                  offsetY: this.selectedSceneId === item.id ? 4 : 0
-                })
+              .padding(LuminaSpacing.MD)
+              .borderRadius(LuminaRadius.XL)
+              .border({
+                width: 2,
+                color: this.selectedSceneId === item.id ? LuminaColors.PRIMARY_BLUE : LuminaColors.BORDER
+              })
+              .backgroundColor(this.selectedSceneId === item.id ? LuminaColors.BG_PRIMARY : LuminaColors.BG_SURFACE)
+              .shadow({
+                radius: this.selectedSceneId === item.id ? 8 : 0,
+                color: this.selectedSceneId === item.id ? LuminaColors.PRIMARY_BLUE : '#000000',
+                offsetX: 0,
+                offsetY: this.selectedSceneId === item.id ? 4 : 0
+              })
               .onClick(async () => {
-                  // 切换选中状态
-                  this.selectedSceneId = this.selectedSceneId === item.id ? null : item.id;
-                  
-                  // 将 string 类型的 route 转换为 Route 类型
-                  const targetRoute = item.route as 'pages/ScenarioDetail' | 'pages/BatchProcess';
-                  const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
-                  params['scenarioId'] = item.id;
-                  params['scenarioTitle'] = item.title;
-                  
-                  try {
-                    console.info(`[Index] 准备跳转到: ${targetRoute}, scenarioId: ${item.id}, title: ${item.title}`);
-                    await RouterService.getInstance().navigateTo(targetRoute, params);
-                    console.info(`[Index] 跳转成功: ${targetRoute}`);
-                  } catch (err) {
-                    const errorMsg = err instanceof Error ? err.message : String(err);
-                    console.error(`[Index] 跳转失败: ${errorMsg}`);
-                    // 使用提示框显示错误，方便用户看到
-                    promptAction.showToast({
-                      message: `跳转失败: ${errorMsg}`,
-                      duration: 2000
-                    });
-                  }
+                // 切换选中状态
+                this.selectedSceneId = this.selectedSceneId === item.id ? null : item.id;
+                
+                // 将 string 类型的 route 转换为 Route 类型
+                const targetRoute = item.route as 'pages/ScenarioDetail' | 'pages/BatchProcess';
+                const params: Record<string, string | number | boolean | string[] | undefined> = {} as Record<string, string | number | boolean | string[] | undefined>;
+                params['scenarioId'] = item.id;
+                params['scenarioTitle'] = item.title;
+                
+                try {
+                  console.info(`[Index] 准备跳转到: ${targetRoute}, scenarioId: ${item.id}, title: ${item.title}`);
+                  await RouterService.getInstance().navigateTo(targetRoute, params);
+                  console.info(`[Index] 跳转成功: ${targetRoute}`);
+                } catch (err) {
+                  const errorMsg = err instanceof Error ? err.message : String(err);
+                  console.error(`[Index] 跳转失败: ${errorMsg}`);
+                  // 使用提示框显示错误，方便用户看到
+                  promptAction.showToast({
+                    message: `跳转失败: ${errorMsg}`,
+                    duration: 2000
+                  });
+                }
               })
             }
           }, (item: ScenarioItem) => item.id)
         }
         .columnsTemplate('1fr 1fr')
         .rowsTemplate('1fr 1fr 1fr')
-        .columnsGap(12)
-        .rowsGap(12)
+        .columnsGap(LuminaLayout.GRID_GAP)
+        .rowsGap(LuminaLayout.GRID_GAP)
         .width('100%')
-          .height(456)
-        .margin({ bottom: 24 })
+        .height(456)
+        .margin({ bottom: LuminaLayout.SECTION_SPACING })
 
           // 最近作品区域
           if (this.recentWorks.length > 0) {
@@ -365,22 +366,22 @@ struct Index {
               // 区域标题和查看全部
               Row() {
                 Text('最近作品')
-                  .fontSize(20)
-                  .fontWeight(FontWeight.Medium)
-                  .fontColor('#1A1F36')
+                  .fontSize(LuminaTypography.TITLE)
+                  .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+                  .fontColor(LuminaColors.TEXT_PRIMARY)
                   .layoutWeight(1)
 
                 Row() {
                   Text('查看全部')
-                    .fontSize(16)
-                    .fontWeight(FontWeight.Medium)
-                    .fontColor('#667eea')
+                    .fontSize(LuminaTypography.BODY)
+                    .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+                    .fontColor(LuminaColors.PRIMARY_BLUE)
 
                   Text('>')
-                    .fontSize(16)
-                    .fontWeight(FontWeight.Medium)
-                    .fontColor('#667eea')
-                    .margin({ left: 4 })
+                    .fontSize(LuminaTypography.BODY)
+                    .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+                    .fontColor(LuminaColors.PRIMARY_BLUE)
+                    .margin({ left: LuminaSpacing.XS })
                 }
                 .onClick(async () => {
                   // 切换到Tab 2 (作品页)
@@ -391,19 +392,19 @@ struct Index {
                 })
               }
               .width('100%')
-              .margin({ bottom: 16 })
+              .margin({ bottom: LuminaSpacing.MD })
 
               // 作品图片横向滚动（第一行）
               Scroll() {
                 Row() {
                   ForEach(this.recentWorks.slice(0, 5), (work: RecentWork) => {
                     Image(work.thumbnail || $r('app.media.startIcon'))
-                      .width(143)
-                      .height(143)
-                      .borderRadius(12)
+                      .width(LuminaSizes.WORK_THUMBNAIL_SIZE)
+                      .height(LuminaSizes.WORK_THUMBNAIL_SIZE)
+                      .borderRadius(LuminaRadius.LG)
                       .objectFit(ImageFit.Cover)
-                      .backgroundColor('#E5E7EB')
-                      .margin({ right: 8 })
+                      .backgroundColor(LuminaColors.BORDER)
+                      .margin({ right: LuminaSpacing.SM })
                       .shadow({
                         radius: 4,
                         color: '#000000',
@@ -425,22 +426,22 @@ struct Index {
               .scrollable(ScrollDirection.Horizontal)
               .scrollBar(BarState.Off)
               .width('100%')
-              .margin({ left: -16, right: -16, bottom: 8 })
-              .padding({ left: 16, right: 16 })
+              .margin({ left: -LuminaLayout.PAGE_PADDING_H, right: -LuminaLayout.PAGE_PADDING_H, bottom: LuminaSpacing.SM })
+              .padding({ left: LuminaLayout.PAGE_PADDING_H, right: LuminaLayout.PAGE_PADDING_H })
 
               // 文件名横向滚动（第二行）
               Scroll() {
                 Row() {
                   ForEach(this.recentWorks.slice(0, 5), (work: RecentWork) => {
                     Text(work.filename)
-                      .fontSize(12)
-                      .fontWeight(FontWeight.Regular)
-                      .fontColor('#6B7280')
+                      .fontSize(LuminaTypography.LABEL)
+                      .fontWeight(LuminaTypography.WEIGHT_REGULAR)
+                      .fontColor(LuminaColors.TEXT_SECONDARY)
                       .maxLines(1)
                       .textOverflow({ overflow: TextOverflow.Ellipsis })
-                      .width(143)
-                      .textAlign(TextAlign.Center)
-                      .margin({ right: 8 })
+                      .width(LuminaSizes.WORK_THUMBNAIL_SIZE)
+                      .textAlign(LuminaLayout.TEXT_ALIGN_CENTER)
+                      .margin({ right: LuminaSpacing.SM })
                   }, (work: RecentWork) => `name-${work.id}`)
                 }
                 .padding({ left: 0, right: 0 })
@@ -448,67 +449,67 @@ struct Index {
               .scrollable(ScrollDirection.Horizontal)
               .scrollBar(BarState.Off)
               .width('100%')
-              .margin({ left: -16, right: -16 })
-              .padding({ left: 16, right: 16 })
+              .margin({ left: -LuminaLayout.PAGE_PADDING_H, right: -LuminaLayout.PAGE_PADDING_H })
+              .padding({ left: LuminaLayout.PAGE_PADDING_H, right: LuminaLayout.PAGE_PADDING_H })
             }
             .width('100%')
-            .margin({ bottom: 24 })
+            .margin({ bottom: LuminaLayout.SECTION_SPACING })
           }
 
           // 升级专业版横幅
-        Row() {
+          Row() {
             // 左侧图标
             Stack() {
-              Circle({ width: 32, height: 32 })
+              Circle({ width: LuminaSizes.ICON_LG, height: LuminaSizes.ICON_LG })
                 .fill('#FFFFFF')
                 .opacity(0.2)
               
               Image($r('app.media.zhuanye'))
-                .width(24)
-                .height(24)
+                .width(LuminaSizes.ICON_MD)
+                .height(LuminaSizes.ICON_MD)
                 .objectFit(ImageFit.Contain)
             }
-            .width(32)
-            .height(32)
+            .width(LuminaSizes.ICON_LG)
+            .height(LuminaSizes.ICON_LG)
             .alignContent(Alignment.Center)
-            .margin({ right: 12 })
+            .margin({ right: LuminaSpacing.SM })
 
             // 中间文字
-          Column() {
-            Text($r('app.string.upgrade_pro'))
-              .fontSize(16)
-                .fontWeight(FontWeight.Medium)
-              .fontColor('#FFFFFF')
-                .margin({ bottom: 2 })
+            Column() {
+              Text($r('app.string.upgrade_pro'))
+                .fontSize(LuminaTypography.BODY)
+                .fontWeight(LuminaTypography.WEIGHT_MEDIUM)
+                .fontColor('#FFFFFF')
+                .margin({ bottom: LuminaSpacing.XS })
 
-            Text($r('app.string.unlimited_use'))
-                .fontSize(14)
-              .fontColor('#FFFFFF')
-              .opacity(0.9)
-          }
-          .alignItems(HorizontalAlign.Start)
-          .layoutWeight(1)
+              Text($r('app.string.unlimited_use'))
+                .fontSize(LuminaTypography.CAPTION)
+                .fontColor('#FFFFFF')
+                .opacity(0.9)
+            }
+            .alignItems(LuminaLayout.ALIGN_START)
+            .layoutWeight(1)
 
             // 右侧箭头
-          Image($r('app.media.right'))
+            Image($r('app.media.right'))
               .width(20)
               .height(20)
               .fillColor('#FFFFFF')
           }
           .width('100%')
           .height(80)
-          .padding({ left: 20, right: 20, top: 16, bottom: 16 })
-          .borderRadius(16)
+          .padding({ left: 20, right: 20, top: LuminaSpacing.MD, bottom: LuminaSpacing.MD })
+          .borderRadius(LuminaRadius.XL)
           .linearGradient({
             angle: 135,
             colors: [
-              ['#667eea', 0.0],
-              ['#764ba2', 1.0]
+              [LuminaColors.PRIMARY_BLUE, 0.0],
+              [LuminaColors.SECONDARY_PURPLE, 1.0]
             ]
           })
           .shadow({
             radius: 12,
-            color: '#667eea',
+            color: LuminaColors.PRIMARY_BLUE,
             offsetX: 0,
             offsetY: 4
           })
@@ -521,18 +522,19 @@ struct Index {
           })
         }
         .width('100%')
-        .padding({ left: 16, right: 16, top: 0, bottom: 24 })
-        .alignItems(HorizontalAlign.Start)
+        .padding({ left: LuminaLayout.PAGE_PADDING_H, right: LuminaLayout.PAGE_PADDING_H, top: 0, bottom: LuminaLayout.SECTION_SPACING })
+        .alignItems(LuminaLayout.ALIGN_START)
       }
       .layoutWeight(1)
       .width('100%')
-      .backgroundColor('#F8F9FC')
+      .padding({ left: LuminaLayout.PAGE_PADDING_H, right: LuminaLayout.PAGE_PADDING_H })
+      .backgroundColor(LuminaColors.BG_PRIMARY)
 
       // 底部导航栏
       TabBar()
     }
     .width('100%')
     .height('100%')
-    .backgroundColor('#F8F9FC')
+    .backgroundColor(LuminaColors.BG_PRIMARY)
   }
 }

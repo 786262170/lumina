@@ -70,7 +70,6 @@ export class LuminaTypography {
   // 字重
   static readonly WEIGHT_REGULAR: FontWeight = FontWeight.Regular;
   static readonly WEIGHT_MEDIUM: FontWeight = FontWeight.Medium;
-  static readonly WEIGHT_SEMIBOLD: FontWeight = FontWeight.SemiBold;
   static readonly WEIGHT_BOLD: FontWeight = FontWeight.Bold;
 }
 
@@ -133,7 +132,13 @@ export class LuminaSizes {
   // 按钮尺寸
   static readonly BUTTON_HEIGHT_SM: number = 32;
   static readonly BUTTON_HEIGHT_MD: number = 44;
-  static readonly BUTTON_HEIGHT_LG: number = 56;
+  static readonly BUTTON_HEIGHT_LG: number = 50;
+  static readonly BUTTON_HEIGHT_XL: number = 56;
+
+  // 输入框尺寸
+  static readonly INPUT_HEIGHT: number = 48;
+  static readonly INPUT_PADDING_H: number = 16;
+  static readonly INPUT_PADDING_V: number = 12;
 
   // 导航栏
   static readonly NAV_BAR_HEIGHT: number = 56;
@@ -143,5 +148,79 @@ export class LuminaSizes {
   static readonly SCENE_CARD_WIDTH: number = 165.5;
   static readonly SCENE_CARD_HEIGHT: number = 144;
   static readonly WORK_THUMBNAIL_SIZE: number = 143;
+
+  // 头像尺寸
+  static readonly AVATAR_SM: number = 32;
+  static readonly AVATAR_MD: number = 40;
+  static readonly AVATAR_LG: number = 64;
+  static readonly AVATAR_XL: number = 80;
+}
+
+/**
+ * 布局系统 - 统一的对齐和间距规范
+ */
+export class LuminaLayout {
+  // 页面内边距
+  static readonly PAGE_PADDING_H: number = 16; // 水平内边距
+  static readonly PAGE_PADDING_V: number = 24; // 垂直内边距
+  static readonly PAGE_PADDING_H_LARGE: number = 24; // 大页面水平内边距
+
+  // 内容区域间距
+  static readonly SECTION_SPACING: number = 24; // 区块间距
+  static readonly ITEM_SPACING: number = 16; // 项目间距
+  static readonly ITEM_SPACING_SM: number = 12; // 小项目间距
+  static readonly ITEM_SPACING_LG: number = 32; // 大项目间距
+
+  // 网格间距
+  static readonly GRID_GAP: number = 12; // 网格间距
+  static readonly GRID_GAP_SM: number = 8; // 小网格间距
+  static readonly GRID_GAP_LG: number = 16; // 大网格间距
+
+  // 列表项间距
+  static readonly LIST_ITEM_SPACING: number = 12;
+  static readonly LIST_SECTION_SPACING: number = 24;
+
+  // 对齐方式
+  static readonly ALIGN_START: HorizontalAlign = HorizontalAlign.Start;
+  static readonly ALIGN_CENTER: HorizontalAlign = HorizontalAlign.Center;
+  static readonly ALIGN_END: HorizontalAlign = HorizontalAlign.End;
+
+  // 文本对齐
+  static readonly TEXT_ALIGN_LEFT: TextAlign = TextAlign.Start;
+  static readonly TEXT_ALIGN_CENTER: TextAlign = TextAlign.Center;
+  static readonly TEXT_ALIGN_RIGHT: TextAlign = TextAlign.End;
+}
+
+/**
+ * 组件样式预设 - 常用的组件样式组合
+ * 注意：由于 ArkTS 限制，这些样式仅作为参考，实际使用时需要直接应用属性
+ */
+export class LuminaStyles {
+  // 卡片样式 - 仅作为参考值，使用时需要直接应用
+  static readonly CARD_BORDER_RADIUS: number = LuminaRadius.LG;
+  static readonly CARD_BACKGROUND_COLOR: string = LuminaColors.BG_SURFACE;
+  static readonly CARD_PADDING: number = LuminaSpacing.MD;
+  static readonly CARD_BORDER_WIDTH: number = 1;
+  static readonly CARD_BORDER_COLOR: string = LuminaColors.BORDER;
+
+  // 输入框样式 - 仅作为参考值，使用时需要直接应用
+  static readonly INPUT_HEIGHT: number = LuminaSizes.INPUT_HEIGHT;
+  static readonly INPUT_BORDER_RADIUS: number = LuminaRadius.MD;
+  static readonly INPUT_BACKGROUND_COLOR: string = LuminaColors.BG_SURFACE;
+  static readonly INPUT_BORDER_WIDTH: number = 1;
+  static readonly INPUT_BORDER_COLOR: string = LuminaColors.BORDER;
+  static readonly INPUT_PADDING_H: number = LuminaSizes.INPUT_PADDING_H;
+
+  // 主按钮样式 - 仅作为参考值，使用时需要直接应用
+  static readonly PRIMARY_BUTTON_HEIGHT: number = LuminaSizes.BUTTON_HEIGHT_LG;
+  static readonly PRIMARY_BUTTON_BORDER_RADIUS: number = LuminaRadius.MD;
+  static readonly PRIMARY_BUTTON_BACKGROUND_COLOR: string = LuminaColors.PRIMARY_BLUE;
+
+  // 次要按钮样式 - 仅作为参考值，使用时需要直接应用
+  static readonly SECONDARY_BUTTON_HEIGHT: number = LuminaSizes.BUTTON_HEIGHT_MD;
+  static readonly SECONDARY_BUTTON_BORDER_RADIUS: number = LuminaRadius.MD;
+  static readonly SECONDARY_BUTTON_BACKGROUND_COLOR: string = LuminaColors.BG_SURFACE;
+  static readonly SECONDARY_BUTTON_BORDER_WIDTH: number = 1;
+  static readonly SECONDARY_BUTTON_BORDER_COLOR: string = LuminaColors.BORDER;
 }
 
